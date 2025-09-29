@@ -14,7 +14,8 @@ cd Permeator-Probe
 
 Run this command to create a new environment with the right dependencies (e.g. dolfinx, OpenFOAM):
 
-```conda env create -f environment.yml 
+```
+conda env create -f environment.yml 
 ```
 
 Then, activate the environment: 

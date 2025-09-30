@@ -16,7 +16,7 @@ gmsh.initialize()
 
 gmsh.model.add("candido_probe")
 
-cad_file_path = "breeder.step"
+cad_file_path = "meshing/breeder.step"
 gmsh.model.occ.importShapes(cad_file_path)
 
 gmsh.model.occ.synchronize()
@@ -84,6 +84,8 @@ for tag in [inlet_marker, outlet_marker, wall_marker]:  # refinement for tube
 
 ##### GENERATE MESH #####
 
+gmsh.option.setNumber("Mesh.MshFileVersion", 2.2)
+
 gmsh.model.occ.synchronize()
 
 gmsh.model.mesh.generate(3)  # 3D mesh
@@ -99,7 +101,7 @@ gmsh.finalize()
 
 # read mesh, volume tags, and surface tags
 mesh, volume_tags, surface_tags = gmshio.read_from_msh(
-    "probe_breeder.msh", MPI.COMM_WORLD, 0, gdim=3
+    "meshing/probe_breeder.msh", MPI.COMM_WORLD, 0, gdim=3
 )
 
 print(f"Volume tags: {np.unique(volume_tags.values)}")

@@ -21,6 +21,7 @@ gmsh.model.occ.importShapes(cad_file_path)
 
 gmsh.model.occ.synchronize()
 
+
 ##### TAG & NAME PHYSICAL GROUPS #####
 
 # VOLUMES
@@ -49,11 +50,8 @@ surfaces = gmsh.model.occ.getEntities(dim=2)  # now getting surfaces using dimen
 wall_tag = 1
 outlet_tag = 2
 inlet_tag = 3
-probe_tags = [
-    4,
-    5,
-    # 6,
-]  # 4 and 5 are the caps (patches at ends) of the inner capsule (which is NOT included in the surface of the capsule (tag 6)!)
+probe_tags = [4, 5, 6]
+# 4 and 5 are the caps (patches at ends) of the inner capsule (which is NOT included in the surface of the capsule (tag 6)!)
 
 # markers for gmsh
 wall_marker = 1
@@ -62,69 +60,36 @@ inlet_marker = 3
 probe_marker = 4
 
 # assign surfaces with gmsh
-gmsh.model.addPhysicalGroup(surfaces[0][0], [wall_tag], wall_marker)
-gmsh.model.setPhysicalName(surfaces[0][0], wall_marker, "wall")
-
-gmsh.model.addPhysicalGroup(surfaces[0][0], [outlet_tag], outlet_marker)
-gmsh.model.setPhysicalName(surfaces[0][0], outlet_marker, "outlet")
-
-gmsh.model.addPhysicalGroup(surfaces[0][0], [inlet_tag], inlet_marker)
-gmsh.model.setPhysicalName(surfaces[0][0], inlet_marker, "inlet")
-
-gmsh.model.addPhysicalGroup(surfaces[0][0], probe_tags, probe_marker)
-gmsh.model.setPhysicalName(surfaces[0][0], probe_marker, "probe")
+gmsh.model.addPhysicalGroup(surfaces[0][0], [wall_tag], wall_marker, name="wall")
+gmsh.model.addPhysicalGroup(surfaces[0][0], [outlet_tag], outlet_marker, name="outlet")
+gmsh.model.addPhysicalGroup(surfaces[0][0], [inlet_tag], inlet_marker, name="inlet")
+gmsh.model.addPhysicalGroup(surfaces[0][0], probe_tags, probe_marker, name="probe")
 
 
 ##### MESH SIZE & REFINEMENT #####
 
-# refine mesh near the probe
-distance = gmsh.model.mesh.field.add(
-    "Distance"
-)  # create mesh size field calculating distance from specified model entities to other parts of geometry
-# distance variable stores the id of this field
-gmsh.model.mesh.field.setNumbers(
-    distance, "FacesList", probe_tags
-)  # calculating distance from probe surfaces
-# returns calculated distance for each mesh point in model to specified entities (here, probe surfaces)
+# probe_minor_radius = 0.1  # (d/2) in cm, from CAD
+tube_radius = 13  # in cm, from CAD
 
-probe_minor_radius = 0.1  # (d/2) in cm, from CAD
-resolution = probe_minor_radius / 2
+gmsh.option.setNumber("Mesh.MeshSizeFromCurvature", 10)  # high refinement for probe
 
-threshold = gmsh.model.mesh.field.add(
-    "Threshold"
-)  # creates new mesh size field to control mesh element sizes
-gmsh.model.mesh.field.setNumber(
-    threshold, "IField", distance
-)  # bases threshold input field off of field id of distance field (stored in distance variable)
-gmsh.model.mesh.field.setNumber(
-    threshold, "LcMin", resolution
-)  # minimum characteristic length
-gmsh.model.mesh.field.setNumber(
-    threshold, "LcMax", 20 * resolution
-)  # maximum characteristic length
-gmsh.model.mesh.field.setNumber(
-    threshold, "DistMin", 0.5 * probe_minor_radius
-)  # minimum characteristic distance
-gmsh.model.mesh.field.setNumber(
-    threshold, "DistMax", probe_minor_radius
-)  # maximum characteristic distance
+gmsh.model.occ.synchronize()
 
-# set minimum mesh field size via probe refinement
-minimum = gmsh.model.mesh.field.add("Min")
-gmsh.model.mesh.field.setNumbers(minimum, "FieldsList", [threshold])
-gmsh.model.mesh.field.setAsBackgroundMesh(
-    minimum
-)  # sets this as default background mesh size
+for tag in [inlet_marker, outlet_marker, wall_marker]:  # refinement for tube
+    boundary = gmsh.model.getBoundary([(2, tag)], recursive=True)
+    for dim, pt in boundary:
+        if dim == 0:  # have to set mesh size per point
+            gmsh.model.mesh.setSize([(0, pt)], 10)
 
-# # to only show surfaces (not volumes) in pyvista
-# gmsh.option.setNumber("Mesh.SurfaceFaces", 1)  # show 2D faces
-# gmsh.option.setNumber("Mesh.VolumeEdges", 0)  # hide 3D element edges
 
 ##### GENERATE MESH #####
 
 gmsh.model.occ.synchronize()
 
 gmsh.model.mesh.generate(3)  # 3D mesh
+
+gmsh.fltk.run()  # comment out if want to run without GUI
+
 gmsh.write("probe_breeder.msh")
 gmsh.finalize()
 
@@ -144,15 +109,20 @@ print(f"Surface tags: {np.unique(surface_tags.values)}")
 pyvista.start_xvfb()
 pyvista.set_jupyter_backend("html")
 
-# TODO comment rest of this
+tdim = mesh.topology.dim  # gets dimensions of the mesh cells / elements
 
-tdim = mesh.topology.dim
+mesh.topology.create_connectivity(
+    tdim, tdim
+)  # generates and stores connectivity between mesh entities of all dimensions (tdim)
 
-mesh.topology.create_connectivity(tdim, tdim)
-topology, cell_types, geometry = plot.vtk_mesh(mesh, tdim)
-grid = pyvista.UnstructuredGrid(topology, cell_types, geometry)
+topology, cell_types, geometry = plot.vtk_mesh(
+    mesh, tdim
+)  # preps mesh for plotting in pyvista
+grid = pyvista.UnstructuredGrid(
+    topology, cell_types, geometry
+)  # makes the mesh in pyvista
 
-plotter = pyvista.Plotter()
+plotter = pyvista.Plotter()  # initialize plotter, then plot below
 plotter.add_mesh(
     grid, show_edges=True, opacity=0.5
 )  # change show_edges to False if want to visualize just surfaces

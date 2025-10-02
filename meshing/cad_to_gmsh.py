@@ -14,6 +14,10 @@ from mpi4py import MPI
 
 gmsh.initialize()
 
+gmsh.option.setNumber(
+    "Geometry.ScalingFactor", 0.01
+)  # scaling factor to convert cm to m
+
 gmsh.model.add("candido_probe")
 
 cad_file_path = "meshing/breeder.step"
@@ -92,7 +96,7 @@ gmsh.model.mesh.generate(3)  # 3D mesh
 
 gmsh.fltk.run()  # comment out if want to run without GUI
 
-gmsh.write("probe_breeder.msh")
+gmsh.write("meshing/probe_breeder.msh")
 gmsh.finalize()
 
 ########################################

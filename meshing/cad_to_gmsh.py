@@ -14,9 +14,13 @@ from mpi4py import MPI
 
 gmsh.initialize()
 
+gmsh.option.setNumber(
+    "Geometry.ScalingFactor", 0.01
+)  # scaling factor to convert cm to m
+
 gmsh.model.add("candido_probe")
 
-cad_file_path = "breeder.step"
+cad_file_path = "meshing/breeder.step"
 gmsh.model.occ.importShapes(cad_file_path)
 
 gmsh.model.occ.synchronize()
@@ -90,7 +94,7 @@ gmsh.model.mesh.generate(3)  # 3D mesh
 
 gmsh.fltk.run()  # comment out if want to run without GUI
 
-gmsh.write("probe_breeder.msh")
+gmsh.write("meshing/probe_breeder.msh")
 gmsh.finalize()
 
 ########################################
@@ -99,7 +103,7 @@ gmsh.finalize()
 
 # read mesh, volume tags, and surface tags
 mesh, volume_tags, surface_tags = gmshio.read_from_msh(
-    "probe_breeder.msh", MPI.COMM_WORLD, 0, gdim=3
+    "meshing/probe_breeder.msh", MPI.COMM_WORLD, 0, gdim=3
 )
 
 print(f"Volume tags: {np.unique(volume_tags.values)}")

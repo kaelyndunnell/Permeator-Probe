@@ -35,6 +35,9 @@ characteristic_length = 13e-2  # m, diameter of tube
 
 reynolds_number = (inlet_velocity * characteristic_length) / kinematic_viscosity
 
-print(
-    f"Reynolds number for {fluid} is {reynolds_number}. Reynolds numbers above 3500 are generally considered to indicate turbulent flow."
-)
+print(f"Reynolds number for {fluid} is {reynolds_number}.")
+
+if reynolds_number > 3500:
+    print(f"Flow is turbulent.")
+else:
+    print(f"Flow is laminar.")

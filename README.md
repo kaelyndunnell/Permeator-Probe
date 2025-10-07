@@ -23,3 +23,35 @@ Then, activate the environment:
 ```
 conda activate permeator-probe-env
 ```
+
+## Workflow: 
+
+Create mesh: 
+
+ ```
+ python meshing/cad_to_gmsh.py
+ ```
+
+ Convert mesh to OpenFOAM format: 
+
+ ```
+ mv meshing/probe_breeder.msh OpenFOAM/probe-case
+ cd OpenFOAM/probe-case
+ gmshToFoam probe_breeder.msh
+ ```
+
+ Check the mesh with OpenFOAM: 
+
+ ```
+ checkMesh
+ ```
+
+ > **_NOTE:_**  Ensure the bounding box of the mesh is in proper units (i.e., our mesh is in centimeters, so the bounding box should be on the order of 1e-2). If it isn't, run 
+ `transformPoints "scale=(0.001 0.001 0.001)"` in the command line.
+
+ Finally, run the OpenFOAM simulation:
+
+ ```
+ foamRun -solver incompressibleFluid
+ ```
+

@@ -14,10 +14,6 @@ from mpi4py import MPI
 
 gmsh.initialize()
 
-gmsh.option.setNumber(
-    "Geometry.ScalingFactor", 0.01
-)  # scaling factor to convert cm to m
-
 gmsh.model.add("candido_probe")
 
 cad_file_path = "meshing/breeder.step"
@@ -51,16 +47,16 @@ surfaces = gmsh.model.occ.getEntities(dim=2)  # now getting surfaces using dimen
 
 # get surface ids from opening CAD (.step) file in gmsh api
 # choose tools > visibility and select the surface to see
-wall_tag = 1
+inlet_tag = 1
 outlet_tag = 2
-inlet_tag = 3
+wall_tag = 3
 probe_tags = [4, 5, 6]
 # 4 and 5 are the caps (patches at ends) of the inner capsule (which is NOT included in the surface of the capsule (tag 6)!)
 
 # markers for gmsh
-wall_marker = 1
+inlet_marker = 1
 outlet_marker = 2
-inlet_marker = 3
+wall_marker = 3
 probe_marker = 4
 
 # assign surfaces with gmsh
@@ -73,17 +69,40 @@ gmsh.model.addPhysicalGroup(surfaces[0][0], probe_tags, probe_marker, name="prob
 ##### MESH SIZE & REFINEMENT #####
 
 # probe_minor_radius = 0.1  # (d/2) in cm, from CAD
-tube_radius = 13  # in cm, from CAD
+# tube_radius = 13  # in cm, from CAD
 
 gmsh.option.setNumber("Mesh.MeshSizeFromCurvature", 10)  # high refinement for probe
 
 gmsh.model.occ.synchronize()
 
-for tag in [inlet_marker, outlet_marker, wall_marker]:  # refinement for tube
-    boundary = gmsh.model.getBoundary([(2, tag)], recursive=True)
-    for dim, pt in boundary:
-        if dim == 0:  # have to set mesh size per point
-            gmsh.model.mesh.setSize([(0, pt)], 10)
+# refinement for tube with boundary layer refinement
+inlet_outlet_wall = [
+    inlet_marker,
+    outlet_marker,
+    wall_marker,
+]  # set distance field near inlet, outlet, and wall surfaces
+
+distance_field = gmsh.model.mesh.field.add("Distance")
+gmsh.model.mesh.field.setNumbers(distance_field, "FacesList", inlet_outlet_wall)
+
+# use threshold field to refine near surfaces
+threshold_field = gmsh.model.mesh.field.add("Threshold")
+gmsh.model.mesh.field.setNumber(threshold_field, "IField", distance_field)
+gmsh.model.mesh.field.setNumber(
+    threshold_field, "SizeMin", 3
+)  # smallest mesh size near surfaces
+gmsh.model.mesh.field.setNumber(
+    threshold_field, "SizeMax", 6.5
+)  # mesh size far from surfaces
+# gmsh.model.mesh.field.setNumber(
+#     threshold_field, "DistMin", 1.5
+# )  # distance where within which mesh is fully refined
+# gmsh.model.mesh.field.setNumber(
+#     threshold_field, "DistMax", 2.0
+# )  # distance where mesh transitions to coarse size
+
+# set threshold field as background field (doesn't impact probe surface)
+gmsh.model.mesh.field.setAsBackgroundMesh(threshold_field)
 
 
 ##### GENERATE MESH #####

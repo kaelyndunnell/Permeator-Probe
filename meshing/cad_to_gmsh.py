@@ -14,9 +14,9 @@ from mpi4py import MPI
 
 gmsh.initialize()
 
-gmsh.option.setNumber(
-    "Geometry.ScalingFactor", 0.01
-)  # scaling factor to convert cm to m
+gmsh.option.setString(
+    "Geometry.OCCTargetUnit", "M"
+)  # make sure gmsh reads .step file in meters
 
 gmsh.model.add("candido_probe")
 
@@ -93,17 +93,17 @@ gmsh.model.mesh.field.setNumbers(distance_field, "FacesList", inlet_outlet_wall)
 threshold_field = gmsh.model.mesh.field.add("Threshold")
 gmsh.model.mesh.field.setNumber(threshold_field, "IField", distance_field)
 gmsh.model.mesh.field.setNumber(
-    threshold_field, "SizeMin", 3
+    threshold_field, "SizeMin", 0.005
 )  # smallest mesh size near surfaces
 gmsh.model.mesh.field.setNumber(
-    threshold_field, "SizeMax", 6.5
+    threshold_field, "SizeMax", 0.10
 )  # mesh size far from surfaces
-# gmsh.model.mesh.field.setNumber(
-#     threshold_field, "DistMin", 1.5
-# )  # distance where within which mesh is fully refined
-# gmsh.model.mesh.field.setNumber(
-#     threshold_field, "DistMax", 2.0
-# )  # distance where mesh transitions to coarse size
+gmsh.model.mesh.field.setNumber(
+    threshold_field, "DistMin", 0.015
+)  # distance where within which mesh is fully refined
+gmsh.model.mesh.field.setNumber(
+    threshold_field, "DistMax", 0.02
+)  # distance where mesh transitions to coarse size
 
 # set threshold field as background field (doesn't impact probe surface)
 gmsh.model.mesh.field.setAsBackgroundMesh(threshold_field)

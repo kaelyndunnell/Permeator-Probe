@@ -20,29 +20,29 @@ FoamFile
     {
         type            patch;
         physicalType    patch;
-        nFaces          3713;
-        startFace       3046358;
+        nFaces          1369;
+        startFace       1780915;
     }
     outlet
     {
         type            patch;
         physicalType    patch;
-        nFaces          3713;
-        startFace       3050071;
+        nFaces          1369;
+        startFace       1782284;
     }
     wall
     {
         type            patch;
         physicalType    patch;
-        nFaces          21446;
-        startFace       3053784;
+        nFaces          7986;
+        startFace       1783653;
     }
     probe
     {
         type            patch;
         physicalType    patch;
-        nFaces          26432;
-        startFace       3075230;
+        nFaces          26458;
+        startFace       1791639;
     }
 )
 

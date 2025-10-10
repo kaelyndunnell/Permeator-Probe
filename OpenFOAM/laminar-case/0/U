@@ -8,14 +8,37 @@ FoamFile
 
 dimensions      [0 1 -1 0 0 0 0];
 
-internalField   uniform (0 0.0076 0);
+internalField   uniform (0 0 0);
 
 boundaryField
 {
     inlet
     {
-        type            fixedValue;
+        type            codedFixedValue;
         value           uniform (0 0.0076 0);
+
+        name            parabolicVelocity;
+
+        code
+        #{
+            const vectorField& Cf = patch().Cf();
+            vectorField& field = *this;
+
+            const scalar c = 0; 
+            const scalar r = 0.065;
+            const scalar Umax = 0.0076;
+
+
+            forAll(Cf, faceI)
+            {
+                const scalar x = Cf[faceI][0];
+                const scalar z = Cf[faceI][2];  // flow is in y, so x-z is cross-section
+                const scalar rCoord = sqrt(pow(x - c, 2) + pow(z - c, 2));
+
+                field[faceI] = vector(0, Umax * (1 - 0.5 * pow(rCoord / r, 2)), 0);
+
+            }
+        #};
     }
     outlet
     {

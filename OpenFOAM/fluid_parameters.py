@@ -2,9 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def calculate_inlet_velocity(
-    flow_rate, inlet_diameter, breeder_temperature, breeder_density, breeder
-):
+def calculate_inlet_velocity(flow_rate, inlet_diameter, breeder_density, breeder):
     """Calculate the inlet velocity of fluid breeder at a given flow rate, inlet diameter, breeder density, and temperature.
     Used for OpenFOAM simulation.
 
@@ -14,8 +12,6 @@ def calculate_inlet_velocity(
         Flow rate in kg/s.
     inlet_diameter : float
         Inlet diameter in m.
-    breeder_temperature : float
-        Breeder temperature in K.
     breder_density : float
         Breeder fluid density in kg/m3.
     breeder : str
@@ -195,7 +191,7 @@ if __name__ == "__main__":
     )  # m2/s ; from Utili 2023
 
     inlet_velocity = calculate_inlet_velocity(
-        flow_rate, inlet_diameter, breeder_temperature, LiPb_density, breeder
+        flow_rate, inlet_diameter, LiPb_density, breeder
     )
 
     kinematic_viscosity = calculate_kinematic_viscosity(

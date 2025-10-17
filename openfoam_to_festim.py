@@ -14,6 +14,7 @@ def read_openfoam_data(file_name, final_time):
     openfoam_reader = OpenFOAMReader(filename=file_name, cell_type=10)
     p = openfoam_reader.create_dolfinx_function(t=final_time, name="p")
     u = openfoam_reader.create_dolfinx_function(t=final_time, name="U")
+    mesh = openfoam_reader.dolfinx_meshes_dict["default"]
 
     try:
         # read turbulent viscosity if it exists
@@ -23,7 +24,7 @@ def read_openfoam_data(file_name, final_time):
         nut = None
         print("no 'nut' field found.")
 
-    return p, u, nut
+    return p, u, mesh, nut
 
 
 def export_openfoam_data(p, u):

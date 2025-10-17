@@ -10,20 +10,15 @@ from openfoam_to_festim import read_openfoam_data
 from dolfinx import cpp as _cpp
 from mpi4py import MPI
 
-p, u, nut = read_openfoam_data("OpenFOAM/turbulent-case/case.foam", final_time=3.0)
+p, u, mesh, nut = read_openfoam_data(
+    "OpenFOAM/turbulent-case/case.foam", final_time=3.0
+)
 if nut is None:
     raise ValueError(
         "Turbulent viscosity field 'nut' is required for Peclet number calculation."
     )
 
 T = 603.15  # K
-
-print("Loading mesh from GMSH...")
-
-model_rank = 0
-mesh, cell_tags, facet_tags = gmshio.read_from_msh(
-    "OpenFOAM/laminar-case/probe_breeder.msh", MPI.COMM_WORLD, model_rank, gdim=3
-)
 
 D_lipb = htm.diffusivities.filter(material="lipb").mean()
 D_0 = D_lipb.pre_exp.magnitude

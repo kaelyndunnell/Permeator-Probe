@@ -8,14 +8,22 @@ from mpi4py import MPI
 
 def read_openfoam_data(file_name, final_time):
     """
-    Read OpenFOAM data from a file and return the pressure and velocity fields.
+    Read OpenFOAM data from a file and return the pressure, velocity, and viscosity (if it exists) fields.
     """
     print("Reading OpenFOAM data...")
     openfoam_reader = OpenFOAMReader(filename=file_name, cell_type=10)
     p = openfoam_reader.create_dolfinx_function(t=final_time, name="p")
     u = openfoam_reader.create_dolfinx_function(t=final_time, name="U")
 
-    return p, u
+    try:
+        # read turbulent viscosity if it exists
+        nut = openfoam_reader.create_dolfinx_function(t=final_time, name="nut")
+        print("'nut' field found and read.")
+    except Exception:
+        nut = None
+        print("no 'nut' field found.")
+
+    return p, u, nut
 
 
 def export_openfoam_data(p, u):

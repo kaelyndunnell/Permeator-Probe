@@ -3,7 +3,6 @@ from dolfinx.io import gmshio
 from dolfinx import plot
 from mpi4py import MPI
 import numpy as np
-import pyvista
 from openfoam_to_festim import read_openfoam_data
 
 # from meshing.cad_to_gmsh import inlet_marker, outlet_marker, wall_marker, probe_marker TODO: clean this up
@@ -15,15 +14,15 @@ outlet_marker = 2
 wall_marker = 3
 probe_marker = 4
 
-p, u = read_openfoam_data(final_time=100)
-
-print("Building FESTIM model...")
+p, u = read_openfoam_data("OpenFOAM/laminar-case/case.foam", final_time=100)
 
 # LOAD AND READ GMSH MESH
 
+print("Loading mesh from GMSH...")
+
 model_rank = 0
 mesh, cell_tags, facet_tags = gmshio.read_from_msh(
-    "OpenFOAM/probe-case/probe_breeder.msh", MPI.COMM_WORLD, model_rank, gdim=3
+    "OpenFOAM/laminar-case/probe_breeder.msh", MPI.COMM_WORLD, model_rank, gdim=3
 )
 
 print(f"Cell tags: {np.unique(cell_tags.values)}")
@@ -31,11 +30,15 @@ print(f"Facet tags: {np.unique(facet_tags.values)}")
 
 # DEFINE & INITIALIZE MODEL
 
+print("Building FESTIM model...")
+
 my_model = F.HydrogenTransportProblem()
 
 my_model.mesh = F.Mesh(mesh)
 
-material = F.Material(D_0=1, E_D=0)
+material = F.Material(
+    D_0=8.250575481270363e-10, E_D=0.2021
+)  # calculated in fluid_parameters.py
 
 # SET DOMAINS
 
@@ -61,10 +64,8 @@ my_model.species = [H]
 my_model.temperature = 603.15  # K
 
 my_model.boundary_conditions = [
-    F.FixedConcentrationBC(subdomain=inlet, value=1, species=H),
+    F.FixedConcentrationBC(subdomain=inlet, value=1e20, species=H),
     F.FixedConcentrationBC(subdomain=probe, value=0, species=H),
-    F.FixedConcentrationBC(subdomain=outlet, value=0.0, species=H),
-    F.ParticleFluxBC(subdomain=wall, value=0.0, species=H),
 ]
 
 advection = F.AdvectionTerm(velocity=u, subdomain=vol, species=H)
@@ -73,13 +74,13 @@ my_model.advection_terms = [advection]
 # SETTINGS AND EXPORTS
 
 dt = F.Stepsize(
-    initial_value=10, growth_factor=1.1, cutback_factor=0.9, target_nb_iterations=5
+    initial_value=20, growth_factor=1.05, cutback_factor=0.9, target_nb_iterations=5
 )
 
 my_model.settings = F.Settings(
     atol=1e-10,
     rtol=1e-10,
-    transient=True,
+    transient=False,
     final_time=200,
     stepsize=dt,
 )

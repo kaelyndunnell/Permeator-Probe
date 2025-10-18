@@ -4,6 +4,9 @@ from dolfinx import fem
 from festim.helpers import nmm_interpolate
 from dolfinx.io import VTXWriter
 from mpi4py import MPI
+import numpy as np
+from dolfinx.mesh import meshtags, exterior_facet_indices
+from scipy.spatial import cKDTree
 
 
 def read_openfoam_data(file_name, final_time):
@@ -24,7 +27,9 @@ def read_openfoam_data(file_name, final_time):
         nut = None
         print("no 'nut' field found.")
 
-    return p, u, mesh, nut
+    facet_meshtags, volume_meshtags = define_meshtags(openfoam_reader)
+
+    return p, u, mesh, nut, facet_meshtags, volume_meshtags
 
 
 def export_openfoam_data(p, u):
@@ -48,6 +53,72 @@ def export_openfoam_data(p, u):
 
     writer_p.write(t=0)
     writer_u.write(t=0)
+
+
+def tag_boundary_patch(dolfinx_mesh, patch_dataset, patch_id, tol=1e-6):
+    fdim = dolfinx_mesh.topology.dim - 1
+    dolfinx_mesh.topology.create_connectivity(fdim, 0)
+    dolfinx_mesh.topology.create_connectivity(0, fdim)
+    dolfinx_mesh.topology.create_connectivity(fdim, dolfinx_mesh.topology.dim)
+
+    facet_indices = exterior_facet_indices(dolfinx_mesh.topology)
+    x = dolfinx_mesh.geometry.x
+    patch_points = patch_dataset.points
+    tree = cKDTree(x)
+    matched_vertex_indices = tree.query_ball_point(patch_points, tol)
+    matched_vertex_indices = list(set(i for sub in matched_vertex_indices for i in sub))
+
+    matched_facets = []
+    for facet in facet_indices:
+        vertices = dolfinx_mesh.topology.connectivity(fdim, 0).links(facet)
+        if all(v in matched_vertex_indices for v in vertices):
+            matched_facets.append(facet)
+
+    # print(f"Tagging {len(matched_facets)} facets for patch ID {patch_id}")
+    return np.array(matched_facets, dtype=np.int32), np.full(
+        len(matched_facets), patch_id, dtype=np.int32
+    )
+
+
+def define_meshtags(cfd_reader):
+    OF_multiblock = cfd_reader.reader.read()
+    boundary = OF_multiblock["boundary"]
+    mesh = cfd_reader.dolfinx_meshes_dict["default"]
+
+    all_facets = np.array([], dtype=np.int32)
+    all_tags = np.array([], dtype=np.int32)
+
+    for i, name in enumerate(boundary.keys()):
+        if name not in ["inlet", "outlet", "wall", "probe"]:
+            continue
+        facets, tags = tag_boundary_patch(mesh, boundary[name], i + 1)
+        all_facets = np.concatenate([all_facets, facets])
+        all_tags = np.concatenate([all_tags, tags])
+
+        # print(f"Tagging {len(facets)} facets for patch {name} with ID {i + 1}")
+
+    facet_tags = meshtags(
+        mesh,
+        mesh.topology.dim - 1,
+        all_facets,
+        all_tags,
+    )
+
+    num_cells = mesh.topology.index_map(mesh.topology.dim).size_local
+    mesh_cell_indices = np.arange(num_cells, dtype=np.int32)
+    tags_volumes = np.full(num_cells, 1, dtype=np.int32)
+    volume_meshtags = meshtags(mesh, mesh.topology.dim, mesh_cell_indices, tags_volumes)
+
+    num_cells = (
+        mesh.topology.index_map(mesh.topology.dim).size_local
+        + mesh.topology.index_map(mesh.topology.dim).num_ghosts
+    )
+
+    print(f"number of cells in mesh: {num_cells}")
+    return (
+        facet_tags,
+        volume_meshtags,
+    )
 
 
 if __name__ == "__main__":

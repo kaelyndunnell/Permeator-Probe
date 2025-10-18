@@ -185,10 +185,11 @@ if __name__ == "__main__":
     )  # kg/m3 ; equation from Martelli 2019
     tube_diameter = 13e-2  # m, diameter of tube from CAD
 
-    R = 8.314  # J/mol K, ideal gas constant
+    k_b = 8.617e-5  # eV/K, boltzmann constant
+    E_d = 19500 * 1.0364e-5  # = 0.202098
     LiPb_diffusivity = 4.03e-8 * np.exp(
-        -19500 / (R * breeder_temperature)
-    )  # m2/s ; from Utili 2023
+        -E_d / (k_b * breeder_temperature)
+    )  # m2/s ; from Utili 2023, 1 J/mol = 1.0364E-5eV
 
     inlet_velocity = calculate_inlet_velocity(
         flow_rate, inlet_diameter, LiPb_density, breeder

@@ -108,28 +108,6 @@ def calculate_reynolds_number(
     return reynolds_number
 
 
-def calculate_peclet_number(inlet_velocity, characteristic_length, diffusivity):
-    """Calculate the Peclet number of a fluid breeder given its inlet velocity, characteristic length, and diffusivity.
-    Used to determine the relative importance of advection and diffusion in mass transport.
-
-    Parameters    ----------
-    inlet_velocity : float
-        Inlet velocity in m/s.
-    characteristic_length : float
-        Characteristic length in m.
-    diffusivity : float
-        Diffusivity in m2/s.
-
-    Returns
-    -------
-    float
-        Peclet number (dimensionless).
-    """
-    peclet_number = diffusivity / (inlet_velocity * characteristic_length)
-    print(f"Peclet number is {peclet_number} for a diffusivity of {diffusivity}m2/s.")
-    return peclet_number
-
-
 def plot_reynolds_number_vs_inlet_velocity(
     characteristic_length, kinematic_viscosity, breeder_temperature, breeder
 ):
@@ -206,5 +184,3 @@ if __name__ == "__main__":
     plot_reynolds_number_vs_inlet_velocity(
         tube_diameter, kinematic_viscosity, breeder_temperature, breeder
     )
-
-    calculate_peclet_number(inlet_velocity, tube_diameter, diffusivity=LiPb_diffusivity)

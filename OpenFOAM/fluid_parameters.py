@@ -186,9 +186,9 @@ if __name__ == "__main__":
     tube_diameter = 13e-2  # m, diameter of tube from CAD
 
     k_b = 8.617e-5  # eV/K, boltzmann constant
-    E_d = 19500 * 1.0364e-5  # = 0.202098
+    E_D = 19500 * 1.0364e-5  # = 0.202098
     LiPb_diffusivity = 4.03e-8 * np.exp(
-        -E_d / (k_b * breeder_temperature)
+        -E_D / (k_b * breeder_temperature)
     )  # m2/s ; from Utili 2023, 1 J/mol = 1.0364E-5eV
 
     inlet_velocity = calculate_inlet_velocity(

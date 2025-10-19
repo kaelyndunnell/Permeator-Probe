@@ -25,7 +25,7 @@ def read_openfoam_data(file_name, final_time):
         print("'nut' field found and read.")
     except Exception:
         nut = None
-        print("no 'nut' field found.")
+        print("No 'nut' field found.")
 
     facet_meshtags, volume_meshtags = define_meshtags(openfoam_reader)
 

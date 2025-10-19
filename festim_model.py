@@ -93,6 +93,7 @@ def build_festim_model(
     breeder_temperature,
     delta,
     results_folder,
+    festim_final_time,
     steady=True,
 ):
 
@@ -168,12 +169,11 @@ def build_festim_model(
             cutback_factor=0.9,
             target_nb_iterations=5,
         )
-        final_time = 200
         my_model.settings = F.Settings(
             atol=1e04,
             rtol=1e-10,
             transient=True,
-            final_time=final_time,
+            final_time=festim_final_time,
             stepsize=dt,
         )
 
@@ -216,7 +216,8 @@ if __name__ == "__main__":
         breeder_temperature=breeder_temperature,
         delta=delta,
         results_folder="festim_results",
-        steady=True,
+        festim_final_time=60,
+        steady=False,
     )
 
     # INITIALISE AND RUN

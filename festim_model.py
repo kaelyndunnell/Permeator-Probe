@@ -95,6 +95,7 @@ def build_festim_model(
     results_folder,
     festim_final_time,
     steady=True,
+    export_profiles=False,
 ):
 
     # markers for gmsh TODO: do not make this repetitive
@@ -201,9 +202,19 @@ def build_festim_model(
 
     concentration_field = F.VTXSpeciesExport(filename=f"{results_folder}/H.bp", field=H)
 
-    my_model.exports = [outlet_surface_flux, probe_flux, inventory, concentration_field]
+    profile_exports = [F.Profile1DExport(field=H)]
 
-    return my_model
+    my_model.exports = [
+        outlet_surface_flux,
+        probe_flux,
+        inventory,
+        concentration_field,
+    ] + profile_exports
+
+    if export_profiles:
+        return my_model, profile_exports
+    else:
+        return my_model
 
 
 if __name__ == "__main__":
@@ -217,7 +228,8 @@ if __name__ == "__main__":
         delta=delta,
         results_folder="festim_results",
         festim_final_time=60,
-        steady=False,
+        steady=True,
+        export_profiles=False,
     )
 
     # INITIALISE AND RUN

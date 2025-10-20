@@ -10,13 +10,7 @@ from openfoam_to_festim import read_openfoam_data
 from dolfinx import cpp as _cpp
 from mpi4py import MPI
 
-p, u, mesh, nut = read_openfoam_data(
-    "OpenFOAM/turbulent-case/case.foam", final_time=3.0
-)
-if nut is None:
-    raise ValueError(
-        "Turbulent viscosity field 'nut' is required for Peclet number calculation."
-    )
+p, u, mesh, nut = read_openfoam_data("OpenFOAM/laminar-case/case.foam", final_time=8.0)
 
 T = 603.15  # K
 
@@ -33,9 +27,11 @@ v_mag = sqrt(dot(u, u))
 # Compute temperature-dependent diffusivity D(x)
 D_diff = D_0 * exp(-E_D / (F.k_B * T))
 Schmidt = 0.5
-D_turb = nut / Schmidt
 
-D_expr = D_diff + D_turb
+
+# D_turb = nut / Schmidt
+
+D_expr = D_diff  # + D_turb
 
 # evaluate Cell size
 tdim = mesh.topology.dim

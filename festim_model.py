@@ -6,6 +6,7 @@ import ufl
 from dolfinx import cpp as _cpp
 from openfoam_to_festim import read_openfoam_data
 from dolfinx.log import set_log_level, LogLevel
+import matplotlib.pyplot as plt
 
 
 class SurfaceAdvectionFlux(F.SurfaceFlux):
@@ -95,7 +96,6 @@ def build_festim_model(
     results_folder,
     festim_final_time,
     steady=True,
-    export_profiles=False,
 ):
 
     # markers for gmsh TODO: do not make this repetitive
@@ -153,8 +153,13 @@ def build_festim_model(
 
     my_model.temperature = breeder_temperature  # K
 
+    N_A = 6.022e23
+    c_in = (
+        1.5e-2 * N_A
+    )  # atms/m3 , inspired by tritium concentration (mol/m3) of OB loop from Utili 2023
+
     my_model.boundary_conditions = [
-        F.FixedConcentrationBC(subdomain=inlet, value=1e16, species=H),
+        F.FixedConcentrationBC(subdomain=inlet, value=c_in, species=H),
         F.FixedConcentrationBC(subdomain=probe, value=0, species=H),
     ]
 
@@ -196,44 +201,35 @@ def build_festim_model(
     probe_flux = F.SurfaceFlux(
         field=H, surface=probe, filename=f"{results_folder}/probe_surface_flux.csv"
     )
+
     inventory = F.TotalVolume(
         field=H, volume=vol, filename=f"{results_folder}/inventory.csv"
     )
 
     concentration_field = F.VTXSpeciesExport(filename=f"{results_folder}/H.bp", field=H)
 
-    profile_exports = [F.Profile1DExport(field=H)]
-
     my_model.exports = [
         outlet_surface_flux,
         probe_flux,
         inventory,
         concentration_field,
-    ] + profile_exports
+    ]
 
-    if export_profiles:
-        return my_model, profile_exports
-    else:
-        return my_model
+    return my_model
 
 
 if __name__ == "__main__":
-    breeder_temperature = 603.15  # K
-    delta = 0.1
 
     my_model = build_festim_model(
         openfoam_data_file="OpenFOAM/turbulent-case/probe.foam",
         openfoam_final_time=300,
-        breeder_temperature=breeder_temperature,
-        delta=delta,
+        breeder_temperature=603.15,
+        delta=0.1,
         results_folder="festim_results",
-        festim_final_time=60,
-        steady=True,
-        export_profiles=False,
+        festim_final_time=300,  # ignored for steady state
+        steady=False,
     )
 
     # INITIALISE AND RUN
-
     my_model.initialise()
-    # set_log_level(LogLevel.INFO)
     my_model.run()

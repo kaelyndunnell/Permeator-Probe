@@ -62,9 +62,13 @@ walls_marker = 5
 outlet = 13
 outlet_marker = 6
 
+vacuum_surfaces = [4, 7, 10]
+vacuum_marker = 7
+
 gmsh.model.addPhysicalGroup(2, [inlet], inlet_marker, name="inlet")
 gmsh.model.addPhysicalGroup(2, [outlet], outlet_marker, name="outlet")
 gmsh.model.addPhysicalGroup(2, [walls], walls_marker, name="walls")
+gmsh.model.addPhysicalGroup(2, vacuum_surfaces, vacuum_marker, name="vacuum")
 
 
 ##### MESH SIZE & REFINEMENT #####

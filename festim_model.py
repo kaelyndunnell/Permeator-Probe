@@ -3,10 +3,15 @@ import numpy as np
 from scifem import assemble_scalar
 from dolfinx import fem
 import ufl
+import pyvista
 from dolfinx import cpp as _cpp
 from openfoam_to_festim import read_openfoam_data
 from dolfinx.log import set_log_level, LogLevel
 import matplotlib.pyplot as plt
+from dolfinx.io import gmshio
+from mpi4py import MPI
+from basix.ufl import element
+import h_transport_materials as htm
 
 
 class SurfaceAdvectionFlux(F.SurfaceFlux):
@@ -98,55 +103,126 @@ def build_festim_model(
     steady=True,
 ):
 
-    # markers for gmsh TODO: do not make this repetitive
-    inlet_marker = 1
-    outlet_marker = 2
-    wall_marker = 3
-    probe_marker = 4
+    # READ OPENFOAM MESH
 
-    # READ MESH
+    # p, u, openfoam_mesh, nut, facet_meshtags, volume_meshtags = read_openfoam_data(
+    #     openfoam_data_file, final_time=openfoam_final_time
+    # )
 
-    p, u, mesh, nut, facet_meshtags, volume_meshtags = read_openfoam_data(
-        openfoam_data_file, final_time=openfoam_final_time
+    # READ GMSH MESH
+    model_rank = 0
+    festim_mesh, cell_tags, facet_tags = gmshio.read_from_msh(
+        "meshing/festim_mesh.msh", MPI.COMM_WORLD, model_rank, gdim=3
     )
 
     # DEFINE & INITIALIZE MODEL
 
     print("Building FESTIM model...")
 
-    my_model = F.HydrogenTransportProblem()
+    my_model = F.HydrogenTransportProblemDiscontinuous()
 
-    my_model.mesh = F.Mesh(mesh)
-    my_model.facet_meshtags = facet_meshtags
-    my_model.volume_meshtags = volume_meshtags
+    my_model.mesh = F.Mesh(festim_mesh)
+    my_model.facet_meshtags = facet_tags
+    my_model.volume_meshtags = cell_tags
+
+    # interpolate OpenFOAM velocity field onto FESTIM mesh
+    # el = element(
+    #     "Lagrange",
+    #     festim_mesh.topology.cell_name(),
+    #     1,
+    #     shape=(festim_mesh.geometry.dim,),
+    # )
+    # V_openfoam = fem.functionspace(openfoam_mesh, el)
+    # V_festim = fem.functionspace(festim_mesh, el)
+
+    # u_openfoam = fem.Function(V_openfoam)
+    # u_openfoam.interpolate(u)  # u is a fem.function.Function!
+    # festim_velocity = fem.Function(V_festim)
+
+    # cells = np.arange(
+    #     festim_mesh.topology.index_map(festim_mesh.topology.dim).size_local,
+    #     dtype=np.int32,
+    # )
+    # interpolation_data = fem.create_interpolation_data(V_openfoam, V_festim, cells)
+
+    # festim_velocity.interpolate_nonmatching(
+    #     u_openfoam, cells=cells, interpolation_data=interpolation_data
+    # )
 
     D_0_PbLi = 4.03e-08  # m2/s
     E_D_PbLi = 0.2021  # eV
 
-    D_diff = D_0_PbLi * ufl.exp(-E_D_PbLi / (F.k_B * breeder_temperature))
+    # D_diff = D_0_PbLi * ufl.exp(-E_D_PbLi / (F.k_B * breeder_temperature))
 
-    # add stabilization term for diffusion
-    D_art = evaluate_stabalisation_term(mesh=mesh, u=u, delta=delta)
+    # # add stabilization term for diffusion
+    # D_art = evaluate_stabalisation_term(mesh=mesh, u=u, delta=delta)
 
-    D_expr = D_diff + D_art
-    V = fem.functionspace(mesh, ("CG", 1))
-    D_pbli = fem.Function(V)
-    D_pbli.interpolate(fem.Expression(D_expr, V.element.interpolation_points()))
-    material = F.Material(D=D_pbli)
+    # D_expr = D_diff + D_art
+    # V = fem.functionspace(mesh, ("CG", 1))
+    # D_pbli = fem.Function(V)
+    # D_pbli.interpolate(fem.Expression(D_expr, V.element.interpolation_points()))
+    breeder_material = F.Material(
+        D_0=D_0_PbLi, E_D=E_D_PbLi, K_S_0=1.43e23, E_K_S=0.13
+    )  # https://theses.hal.science/tel-04906459v1
+
+    # probe material parameters -- alpha-Fe
+    htm_D_Fe = htm.diffusivities.filter(material="Fe").mean()
+    htm_S_Fe = htm.solubilities.filter(material="Fe").mean()
+
+    iron = F.Material(
+        D_0=htm_D_Fe.pre_exp.magnitude,
+        E_D=htm_D_Fe.act_energy.magnitude,
+        K_S_0=htm_S_Fe.pre_exp.magnitude,
+        E_K_S=htm_S_Fe.act_energy.magnitude,
+    )
 
     # SET DOMAINS
 
-    vol = F.VolumeSubdomain(id=1, material=material)
-
     # use same tags as gmsh markers
+    probe_marker = 1
+    breeder_marker = 2
+
+    probe = F.VolumeSubdomain(id=probe_marker, material=iron)
+    breeder = F.VolumeSubdomain(id=breeder_marker, material=breeder_material)
+
+    interface_marker = 3
+    inlet_marker = 4
+    outlet_marker = 6
+    wall_marker = 5
+    vacuum_marker = 7
+
     inlet = F.SurfaceSubdomain(id=inlet_marker)
     outlet = F.SurfaceSubdomain(id=outlet_marker)
     wall = F.SurfaceSubdomain(id=wall_marker)
-    probe = F.SurfaceSubdomain(id=probe_marker)
+    interface = F.SurfaceSubdomain(id=interface_marker)
+    vacuum = F.SurfaceSubdomain(id=vacuum_marker)
 
-    my_model.subdomains = [inlet, outlet, wall, probe, vol]
+    my_model.subdomains = [
+        probe,
+        breeder,
+        inlet,
+        outlet,
+        wall,
+        interface,
+        vacuum,
+    ]
 
-    H = F.Species("H")
+    my_model.surface_to_volume = (
+        {  # anything defines BC for needs to be here (and exports)
+            inlet: breeder,
+            outlet: breeder,
+            interface: breeder,
+            vacuum: probe,
+        }
+    )
+
+    my_model.interfaces = [
+        F.Interface(
+            id=interface_marker, subdomains=[breeder, probe], penalty_term=1e23
+        ),
+    ]
+
+    H = F.Species("H", subdomains=my_model.volume_subdomains)
     my_model.species = [H]
 
     # SET TEMP AND BOUNDARY CONDITIONS
@@ -158,13 +234,15 @@ def build_festim_model(
         1.5e-2 * N_A
     )  # atms/m3 , inspired by tritium concentration (mol/m3) of OB loop from Utili 2023
 
+    print(f"Inlet Concentration is {c_in} #/m3.")
+
     my_model.boundary_conditions = [
         F.FixedConcentrationBC(subdomain=inlet, value=c_in, species=H),
-        F.FixedConcentrationBC(subdomain=probe, value=0, species=H),
+        F.FixedConcentrationBC(subdomain=vacuum, value=0, species=H),
     ]
 
-    advection = F.AdvectionTerm(velocity=u, subdomain=vol, species=H)
-    my_model.advection_terms = [advection]
+    # advection = F.AdvectionTerm(velocity=festim_velocity, subdomain=breeder, species=H)
+    # my_model.advection_terms = [advection]
 
     # SETTINGS
 
@@ -176,8 +254,8 @@ def build_festim_model(
             target_nb_iterations=5,
         )
         my_model.settings = F.Settings(
-            atol=1e04,
-            rtol=1e-10,
+            atol=1e05,
+            rtol=1e-12,
             transient=True,
             final_time=festim_final_time,
             stepsize=dt,
@@ -192,27 +270,28 @@ def build_festim_model(
 
     # EXPORTS
 
-    outlet_surface_flux = SurfaceAdvectionFlux(
-        field=H,
-        surface=outlet,
-        filename=f"{results_folder}/outlet_surface_flux.csv",
-        velocity_field=u,
-    )
-    probe_flux = F.SurfaceFlux(
-        field=H, surface=probe, filename=f"{results_folder}/probe_surface_flux.csv"
-    )
-
-    inventory = F.TotalVolume(
-        field=H, volume=vol, filename=f"{results_folder}/inventory.csv"
+    # outlet_advective_flux = SurfaceAdvectionFlux(
+    #     field=H,
+    #     surface=outlet,
+    #     filename=f"{results_folder}/outlet_advective_flux.csv",
+    #     velocity_field=festim_velocity,
+    # )
+    permeation_flux = F.SurfaceFlux(
+        field=H, surface=vacuum, filename=f"{results_folder}/permeation_flux.csv"
     )
 
-    concentration_field = F.VTXSpeciesExport(filename=f"{results_folder}/H.bp", field=H)
+    concentration_field_breeder = F.VTXSpeciesExport(
+        filename=f"{results_folder}/H_breeder.bp", field=H, subdomain=breeder
+    )
+    concentration_field_probe = F.VTXSpeciesExport(
+        filename=f"{results_folder}/H_probe.bp", field=H, subdomain=probe
+    )
 
     my_model.exports = [
-        outlet_surface_flux,
-        probe_flux,
-        inventory,
-        concentration_field,
+        # outlet_advective_flux,
+        permeation_flux,
+        concentration_field_breeder,
+        concentration_field_probe,
     ]
 
     return my_model
@@ -226,10 +305,11 @@ if __name__ == "__main__":
         breeder_temperature=603.15,
         delta=0.1,
         results_folder="festim_results",
-        festim_final_time=300,  # ignored for steady state
+        festim_final_time=150,  # ignored for steady state
         steady=False,
     )
 
     # INITIALISE AND RUN
     my_model.initialise()
+    set_log_level(LogLevel.INFO)
     my_model.run()

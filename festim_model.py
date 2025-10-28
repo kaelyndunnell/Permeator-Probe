@@ -3,12 +3,11 @@ import numpy as np
 from scifem import assemble_scalar
 from dolfinx import fem
 import ufl
-import pyvista
 from dolfinx import cpp as _cpp
 from openfoam_to_festim import read_openfoam_data
 from dolfinx.log import set_log_level, LogLevel
 import matplotlib.pyplot as plt
-from dolfinx.io import gmshio
+from dolfinx.io import gmsh as gmshio
 from mpi4py import MPI
 from basix.ufl import element
 import h_transport_materials as htm
@@ -111,9 +110,10 @@ def build_festim_model(
 
     # READ GMSH MESH
     model_rank = 0
-    festim_mesh, cell_tags, facet_tags = gmshio.read_from_msh(
+    festim_mesh_data = gmshio.read_from_msh(
         "meshing/festim_mesh.msh", MPI.COMM_WORLD, model_rank, gdim=3
     )
+    festim_mesh = festim_mesh_data.mesh
 
     # DEFINE & INITIALIZE MODEL
 
@@ -122,8 +122,8 @@ def build_festim_model(
     my_model = F.HydrogenTransportProblemDiscontinuous()
 
     my_model.mesh = F.Mesh(festim_mesh)
-    my_model.facet_meshtags = facet_tags
-    my_model.volume_meshtags = cell_tags
+    my_model.facet_meshtags = festim_mesh_data.facet_tags
+    my_model.volume_meshtags = festim_mesh_data.cell_tags
 
     # interpolate OpenFOAM velocity field onto FESTIM mesh
     # el = element(
@@ -218,7 +218,7 @@ def build_festim_model(
 
     my_model.interfaces = [
         F.Interface(
-            id=interface_marker, subdomains=[breeder, probe], penalty_term=1e23
+            id=interface_marker, subdomains=[breeder, probe], penalty_term=1e20
         ),
     ]
 
@@ -306,7 +306,7 @@ if __name__ == "__main__":
         delta=0.1,
         results_folder="festim_results",
         festim_final_time=150,  # ignored for steady state
-        steady=False,
+        steady=True,
     )
 
     # INITIALISE AND RUN

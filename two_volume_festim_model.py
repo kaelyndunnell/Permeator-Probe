@@ -104,9 +104,9 @@ def build_festim_model(
 
     # READ OPENFOAM MESH
 
-    # p, u, openfoam_mesh, nut, facet_meshtags, volume_meshtags = read_openfoam_data(
-    #     openfoam_data_file, final_time=openfoam_final_time
-    # )
+    p, u, openfoam_mesh, nut, facet_meshtags, volume_meshtags = read_openfoam_data(
+        openfoam_data_file, final_time=openfoam_final_time
+    )
 
     # READ GMSH MESH
     model_rank = 0
@@ -126,41 +126,43 @@ def build_festim_model(
     my_model.volume_meshtags = festim_mesh_data.cell_tags
 
     # interpolate OpenFOAM velocity field onto FESTIM mesh
-    # el = element(
-    #     "Lagrange",
-    #     festim_mesh.topology.cell_name(),
-    #     1,
-    #     shape=(festim_mesh.geometry.dim,),
-    # )
-    # V_openfoam = fem.functionspace(openfoam_mesh, el)
-    # V_festim = fem.functionspace(festim_mesh, el)
+    el = element(
+        "Lagrange",
+        festim_mesh.topology.cell_name(),
+        1,
+        shape=(festim_mesh.geometry.dim,),
+    )
+    V_openfoam = fem.functionspace(openfoam_mesh, el)
+    V_festim = fem.functionspace(festim_mesh, el)
 
-    # u_openfoam = fem.Function(V_openfoam)
-    # u_openfoam.interpolate(u)  # u is a fem.function.Function!
-    # festim_velocity = fem.Function(V_festim)
+    u_openfoam = fem.Function(V_openfoam)
+    u_openfoam.interpolate(u)  # u is a fem.function.Function!
+    festim_velocity = fem.Function(V_festim)
 
-    # cells = np.arange(
-    #     festim_mesh.topology.index_map(festim_mesh.topology.dim).size_local,
-    #     dtype=np.int32,
-    # )
-    # interpolation_data = fem.create_interpolation_data(V_openfoam, V_festim, cells)
+    cells = np.arange(
+        festim_mesh.topology.index_map(festim_mesh.topology.dim).size_local,
+        dtype=np.int32,
+    )
+    interpolation_data = fem.create_interpolation_data(V_openfoam, V_festim, cells)
 
-    # festim_velocity.interpolate_nonmatching(
-    #     u_openfoam, cells=cells, interpolation_data=interpolation_data
-    # )
+    festim_velocity.interpolate_nonmatching(
+        u_openfoam, cells=cells, interpolation_data=interpolation_data
+    )
 
     D_0_PbLi = 4.03e-08  # m2/s
     E_D_PbLi = 0.2021  # eV
 
-    # D_diff = D_0_PbLi * ufl.exp(-E_D_PbLi / (F.k_B * breeder_temperature))
+    D_diff = D_0_PbLi * ufl.exp(-E_D_PbLi / (F.k_B * breeder_temperature))
 
-    # # add stabilization term for diffusion
-    # D_art = evaluate_stabalisation_term(mesh=mesh, u=u, delta=delta)
+    # add stabilization term for diffusion
+    D_art = evaluate_stabalisation_term(
+        mesh=festim_mesh, u=festim_velocity, delta=delta
+    )
 
-    # D_expr = D_diff + D_art
-    # V = fem.functionspace(mesh, ("CG", 1))
-    # D_pbli = fem.Function(V)
-    # D_pbli.interpolate(fem.Expression(D_expr, V.element.interpolation_points()))
+    D_expr = D_diff + D_art
+    V = fem.functionspace(festim_mesh, ("CG", 1))
+    D_pbli = fem.Function(V)
+    D_pbli.interpolate(fem.Expression(D_expr, V.element.interpolation_points))
     breeder_material = F.Material(
         D_0=D_0_PbLi, E_D=E_D_PbLi, K_S_0=1.43e23, E_K_S=0.13
     )  # https://theses.hal.science/tel-04906459v1
@@ -218,7 +220,9 @@ def build_festim_model(
 
     my_model.interfaces = [
         F.Interface(
-            id=interface_marker, subdomains=[breeder, probe], penalty_term=1e20
+            id=interface_marker,
+            subdomains=[breeder, probe],
+            penalty_term=1e06,
         ),
     ]
 
@@ -237,12 +241,12 @@ def build_festim_model(
     print(f"Inlet Concentration is {c_in} #/m3.")
 
     my_model.boundary_conditions = [
-        F.FixedConcentrationBC(subdomain=inlet, value=c_in, species=H),
+        F.FixedConcentrationBC(subdomain=inlet, value=1, species=H),
         F.FixedConcentrationBC(subdomain=vacuum, value=0, species=H),
     ]
 
-    # advection = F.AdvectionTerm(velocity=festim_velocity, subdomain=breeder, species=H)
-    # my_model.advection_terms = [advection]
+    advection = F.AdvectionTerm(velocity=festim_velocity, subdomain=breeder, species=H)
+    my_model.advection_terms = [advection]
 
     # SETTINGS
 
@@ -263,19 +267,19 @@ def build_festim_model(
 
     else:
         my_model.settings = F.Settings(
-            atol=1e04,
-            rtol=1e-10,
+            atol=1e-5,
+            rtol=1e-05,
             transient=False,
         )
 
     # EXPORTS
 
-    # outlet_advective_flux = SurfaceAdvectionFlux(
-    #     field=H,
-    #     surface=outlet,
-    #     filename=f"{results_folder}/outlet_advective_flux.csv",
-    #     velocity_field=festim_velocity,
-    # )
+    outlet_advective_flux = SurfaceAdvectionFlux(
+        field=H,
+        surface=outlet,
+        filename=f"{results_folder}/outlet_advective_flux.csv",
+        velocity_field=festim_velocity,
+    )
     permeation_flux = F.SurfaceFlux(
         field=H, surface=vacuum, filename=f"{results_folder}/permeation_flux.csv"
     )
@@ -288,7 +292,7 @@ def build_festim_model(
     )
 
     my_model.exports = [
-        # outlet_advective_flux,
+        outlet_advective_flux,
         permeation_flux,
         concentration_field_breeder,
         concentration_field_probe,

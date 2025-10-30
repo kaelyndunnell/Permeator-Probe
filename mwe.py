@@ -2,13 +2,13 @@ import gmsh
 import dolfinx
 from dolfinx.io import gmsh as gmshio
 from mpi4py import MPI
-from petsc4py import PETSc
 import festim as F
 from dolfinx import fem
 import ufl
 from basix.ufl import element
 import numpy as np
 from dolfinx import cpp as _cpp
+from dolfinx.log import set_log_level, LogLevel
 
 
 def evaluate_stabalisation_term(mesh, u, delta):
@@ -116,8 +116,8 @@ V = fem.functionspace(my_mesh, ("CG", 1))
 D_fluid = fem.Function(V)
 D_fluid.interpolate(fem.Expression(D_expr, V.element.interpolation_points))
 
-dummy_fluid = F.Material(D=D_fluid)
-dummy_tube = F.Material(D_0=2, E_D=1)
+dummy_fluid = F.Material(D=D_fluid, K_S_0=1, E_K_S=1)
+dummy_tube = F.Material(D_0=2, E_D=1, K_S_0=2, E_K_S=2)
 
 inlet = F.SurfaceSubdomain(id=inlet_tag)
 outlet = F.SurfaceSubdomain(id=outlet_tag)
@@ -128,6 +128,7 @@ my_model.subdomains = [inlet, outlet, fluid, tube]
 
 my_model.surface_to_volume = {inlet: fluid, outlet: fluid, interface_tag: fluid}
 H = F.Species("H", subdomains=my_model.volume_subdomains)
+my_model.species = [H]
 my_model.interfaces = [
     F.Interface(id=interface_tag, subdomains=[fluid, tube], penalty_term=100)
 ]
@@ -161,4 +162,5 @@ my_model.exports = [
 
 
 my_model.initialise()
+set_log_level(LogLevel.INFO)
 my_model.run()

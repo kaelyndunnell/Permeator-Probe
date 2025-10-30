@@ -43,49 +43,49 @@ length = 0.4  # cylinder length (m)
 
 factory = gmsh.model.occ
 
-fluid = factory.addCylinder(0, 0, 0, 0, 0, length, r_inner)
-tube = factory.addCylinder(0, 0, 0, 0, 0, length, r_tube)
+fluid = factory.addRectangle(0, 0, 0, length, r_inner)
+tube = factory.addRectangle(0, 0, 0, length, r_tube)
 walls, interface = factory.cut(
-    [(3, tube)], [(3, fluid)], removeObject=True, removeTool=False
+    [(2, tube)], [(2, fluid)], removeObject=True, removeTool=False
 )
 
 factory.synchronize()
-interface_surfaces = [s[1] for s in interface[0]]
-interface_tag = gmsh.model.addPhysicalGroup(2, interface_surfaces)
-gmsh.model.setPhysicalName(2, interface_tag, "interface")
+interface_curves = [s[1] for s in interface[0]]
+interface_tag = gmsh.model.addPhysicalGroup(1, interface_curves)
+gmsh.model.setPhysicalName(1, interface_tag, "interface")
 
-fluid_tag = gmsh.model.addPhysicalGroup(3, [fluid])
-gmsh.model.setPhysicalName(3, fluid_tag, "fluid")
+fluid_tag = gmsh.model.addPhysicalGroup(2, [fluid])
+gmsh.model.setPhysicalName(2, fluid_tag, "fluid")
 
-wall_tag = gmsh.model.addPhysicalGroup(3, [walls[0][1]])
-gmsh.model.setPhysicalName(3, wall_tag, "wall")
+wall_tag = gmsh.model.addPhysicalGroup(2, [walls[0][1]])
+gmsh.model.setPhysicalName(2, wall_tag, "wall")
 
-surfaces = gmsh.model.getEntities(dim=2)
+surfaces = gmsh.model.getEntities(dim=1)
 
 inlet_surfaces = []
 outlet_surfaces = []
 
 for s in surfaces:
     com = gmsh.model.occ.getCenterOfMass(s[0], s[1])
-    # inlet at z=0, outlet at z=length
-    if abs(com[2]) < 1e-6:
+    # inlet at x=0, outlet at x=length
+    if abs(com[0]) < 1e-6:
         inlet_surfaces.append(s[1])
-    elif abs(com[2] - length) < 1e-6:
+    elif abs(com[0] - length) < 1e-6:
         outlet_surfaces.append(s[1])
 
 if inlet_surfaces:
-    inlet_tag = gmsh.model.addPhysicalGroup(2, inlet_surfaces)
-    gmsh.model.setPhysicalName(2, inlet_tag, "inlet")
+    inlet_tag = gmsh.model.addPhysicalGroup(1, inlet_surfaces)
+    gmsh.model.setPhysicalName(1, inlet_tag, "inlet")
 
 if outlet_surfaces:
-    outlet_tag = gmsh.model.addPhysicalGroup(2, outlet_surfaces)
-    gmsh.model.setPhysicalName(2, outlet_tag, "outlet")
+    outlet_tag = gmsh.model.addPhysicalGroup(1, outlet_surfaces)
+    gmsh.model.setPhysicalName(1, outlet_tag, "outlet")
 
-gmsh.model.mesh.generate(3)
+gmsh.model.mesh.generate(2)
 
 gmsh.write("mwe.msh")
 
-mesh_data = gmshio.model_to_mesh(gmsh.model, MPI.COMM_WORLD, 0, gdim=3)
+mesh_data = gmshio.model_to_mesh(gmsh.model, MPI.COMM_WORLD, 0, gdim=2)
 my_mesh = mesh_data.mesh
 
 gmsh.finalize()
@@ -95,7 +95,9 @@ my_model.mesh = F.Mesh(my_mesh)
 my_model.facet_meshtags = mesh_data.facet_tags
 my_model.volume_meshtags = mesh_data.cell_tags
 
+
 el = element("Lagrange", my_mesh.topology.cell_name(), 2, shape=(my_mesh.geometry.dim,))
+
 
 V = dolfinx.fem.functionspace(my_model.mesh.mesh, el)
 
@@ -112,7 +114,7 @@ D_art = evaluate_stabalisation_term(mesh=my_mesh, u=velocity, delta=0.1)
 D_expr = D_diff + D_art
 V = fem.functionspace(my_mesh, ("CG", 1))
 D_fluid = fem.Function(V)
-D_fluid.interpolate(fem.Expression(D_expr, V.element.interpolation_points()))
+D_fluid.interpolate(fem.Expression(D_expr, V.element.interpolation_points))
 
 dummy_fluid = F.Material(D=D_fluid)
 dummy_tube = F.Material(D_0=2, E_D=1)
@@ -144,6 +146,19 @@ my_model.boundary_conditions = [
     F.FixedConcentrationBC(subdomain=inlet, value=1, species=H),
 ]
 my_model.settings = F.Settings(atol=1e-10, rtol=1e-10, transient=False)
+
+concentration_field_fluid = F.VTXSpeciesExport(
+    filename=f"H_fluid.bp", field=H, subdomain=fluid
+)
+concentration_field_tube = F.VTXSpeciesExport(
+    filename=f"H_tube.bp", field=H, subdomain=tube
+)
+
+my_model.exports = [
+    concentration_field_fluid,
+    concentration_field_tube,
+]
+
 
 my_model.initialise()
 my_model.run()

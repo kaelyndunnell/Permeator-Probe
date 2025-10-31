@@ -2,6 +2,7 @@ import gmsh
 import dolfinx
 from dolfinx.io import gmsh as gmshio
 from mpi4py import MPI
+from dolfinx.io import VTXWriter, XDMFFile
 import festim as F
 from dolfinx import fem
 import ufl
@@ -38,7 +39,7 @@ gmsh.initialize()
 gmsh.model.add("mwe")
 
 r_inner = 0.1  # fluid radius (m)
-r_tube = 0.105  # tube wall radius (m)
+r_tube = 0.11  # tube wall radius (m)
 length = 0.4  # cylinder length (m)
 
 factory = gmsh.model.occ
@@ -60,6 +61,9 @@ gmsh.model.setPhysicalName(2, fluid_tag, "fluid")
 wall_tag = gmsh.model.addPhysicalGroup(2, [walls[0][1]])
 gmsh.model.setPhysicalName(2, wall_tag, "wall")
 
+
+gmsh.option.setNumber("Mesh.MeshSizeMax", 0.005)
+
 surfaces = gmsh.model.getEntities(dim=1)
 
 inlet_surfaces = []
@@ -69,17 +73,18 @@ for s in surfaces:
     com = gmsh.model.occ.getCenterOfMass(s[0], s[1])
     # inlet at x=0, outlet at x=length
     if abs(com[0]) < 1e-6:
-        inlet_surfaces.append(s[1])
-    elif abs(com[0] - length) < 1e-6:
-        outlet_surfaces.append(s[1])
+        if abs(com[1]) < r_inner + 1e-6:
+            inlet_surfaces.append(s[1])
+    elif abs(com[0]) > length - 1e-6:
+        if abs(com[1]) < r_inner + 1e-6:
+            outlet_surfaces.append(s[1])
 
-if inlet_surfaces:
-    inlet_tag = gmsh.model.addPhysicalGroup(1, inlet_surfaces)
-    gmsh.model.setPhysicalName(1, inlet_tag, "inlet")
 
-if outlet_surfaces:
-    outlet_tag = gmsh.model.addPhysicalGroup(1, outlet_surfaces)
-    gmsh.model.setPhysicalName(1, outlet_tag, "outlet")
+# inlet_tag = gmsh.model.addPhysicalGroup(1, inlet_surfaces)
+# gmsh.model.setPhysicalName(1, inlet_tag, "inlet")
+
+# outlet_tag = gmsh.model.addPhysicalGroup(1, outlet_surfaces)
+# gmsh.model.setPhysicalName(1, outlet_tag, "outlet")
 
 gmsh.model.mesh.generate(2)
 
@@ -92,9 +97,8 @@ gmsh.finalize()
 
 my_model = F.HydrogenTransportProblemDiscontinuous()
 my_model.mesh = F.Mesh(my_mesh)
-my_model.facet_meshtags = mesh_data.facet_tags
-my_model.volume_meshtags = mesh_data.cell_tags
-
+# my_model.facet_meshtags = mesh_data.facet_tags
+# my_model.volume_meshtags = mesh_data.cell_tags
 
 el = element("Lagrange", my_mesh.topology.cell_name(), 2, shape=(my_mesh.geometry.dim,))
 
@@ -103,35 +107,61 @@ V = dolfinx.fem.functionspace(my_model.mesh.mesh, el)
 
 velocity = dolfinx.fem.Function(V)
 
-velocity.interpolate(lambda x: (-100 * x[1] * (x[1] - 1), np.full_like(x[0], 0.0)))
+entities = mesh_data.cell_tags.find(2)
+velocity.interpolate(
+    lambda x: (-5000 * (1.0 - (x[1] / 0.1) ** 2), np.full_like(x[0], 0.0)),
+    cells0=entities,
+)
 
-
-D_diff = 2 * ufl.exp(-1 / (F.k_B * 500))
+D_diff = 1e-04
 
 # add stabilization term for diffusion
-D_art = evaluate_stabalisation_term(mesh=my_mesh, u=velocity, delta=0.1)
+D_art = evaluate_stabalisation_term(mesh=my_mesh, u=velocity, delta=0.0001)
 
 D_expr = D_diff + D_art
 V = fem.functionspace(my_mesh, ("CG", 1))
 D_fluid = fem.Function(V)
 D_fluid.interpolate(fem.Expression(D_expr, V.element.interpolation_points))
 
-dummy_fluid = F.Material(D=D_fluid, K_S_0=1, E_K_S=1)
-dummy_tube = F.Material(D_0=2, E_D=1, K_S_0=2, E_K_S=2)
 
-inlet = F.SurfaceSubdomain(id=inlet_tag)
-outlet = F.SurfaceSubdomain(id=outlet_tag)
-fluid = F.VolumeSubdomain(id=fluid_tag, material=dummy_fluid)
-tube = F.VolumeSubdomain(id=wall_tag, material=dummy_tube)
+my_writer = VTXWriter(MPI.COMM_WORLD, "velocity_field.bp", velocity, "BP5")
+my_writer.write(t=0)
+
+my_writer_2 = VTXWriter(MPI.COMM_WORLD, "D_field.bp", D_fluid, "BP5")
+my_writer_2.write(t=0)
+
+with XDMFFile(MPI.COMM_WORLD, "facet_tags.xdmf", "w") as xdmf:
+    xdmf.write_mesh(my_mesh)
+    xdmf.write_meshtags(mesh_data.facet_tags, my_mesh.geometry)
+
+with XDMFFile(MPI.COMM_WORLD, "volume_tags.xdmf", "w") as xdmf:
+    xdmf.write_mesh(my_mesh)
+    xdmf.write_meshtags(mesh_data.cell_tags, my_mesh.geometry)
+
+dummy_fluid = F.Material(D=D_fluid, K_S_0=1, E_K_S=0)
+dummy_tube = F.Material(D_0=1e-4, E_D=0.1, K_S_0=2, E_K_S=0)
+
+inlet = F.SurfaceSubdomain(
+    id=4, locator=lambda x: np.logical_and(np.isclose(x[0], 0.0), x[1] < r_inner + 1e-6)
+)
+outlet = F.SurfaceSubdomain(
+    id=5,
+    locator=lambda x: np.logical_and(np.isclose(x[0], length), x[1] < r_inner + 1e-6),
+)
+fluid = F.VolumeSubdomain(
+    id=fluid_tag, material=dummy_fluid, locator=lambda x: x[1] < r_inner + 1e-6
+)
+tube = F.VolumeSubdomain(
+    id=wall_tag, material=dummy_tube, locator=lambda x: x[1] > r_inner - 1e-6
+)
 
 my_model.subdomains = [inlet, outlet, fluid, tube]
 
-my_model.surface_to_volume = {inlet: fluid, outlet: fluid, interface_tag: fluid}
+my_model.surface_to_volume = {inlet: fluid, outlet: fluid}
+
 H = F.Species("H", subdomains=my_model.volume_subdomains)
 my_model.species = [H]
-my_model.interfaces = [
-    F.Interface(id=interface_tag, subdomains=[fluid, tube], penalty_term=100)
-]
+my_model.interfaces = [F.Interface(id=1, subdomains=[fluid, tube], penalty_term=10000)]
 
 my_model.temperature = 500
 
@@ -146,7 +176,9 @@ my_model.advection_terms = [advection_term]
 my_model.boundary_conditions = [
     F.FixedConcentrationBC(subdomain=inlet, value=1, species=H),
 ]
-my_model.settings = F.Settings(atol=1e-10, rtol=1e-10, transient=False)
+my_model.settings = F.Settings(
+    atol=1e-10, rtol=1e-10, transient=True, stepsize=0.1, final_time=20
+)
 
 concentration_field_fluid = F.VTXSpeciesExport(
     filename=f"H_fluid.bp", field=H, subdomain=fluid

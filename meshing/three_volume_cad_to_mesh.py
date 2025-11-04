@@ -10,9 +10,9 @@ gmsh.initialize()
 gmsh.option.setString(
     "Geometry.OCCTargetUnit", "M"
 )  # make sure gmsh reads .step file in meters
-gmsh.model.add("festim_mesh")
+gmsh.model.add("three_volume_mesh")
 
-cad_file_path = "meshing/breeder_with_walls.step"
+cad_file_path = "meshing/three_volumes.step"
 
 entities = gmsh.model.occ.importShapes(cad_file_path)
 gmsh.model.occ.synchronize()
@@ -69,22 +69,15 @@ gmsh.model.addPhysicalGroup(
 )
 
 # other surfaces
-inlet = 11
 inlet_marker = 6
-
-walls = [14, 15, 16]
 walls_marker = 7
-
-outlet = 13
 outlet_marker = 8
-
-vacuum_surfaces = [4, 7, 10]
 vacuum_marker = 9
 
-gmsh.model.addPhysicalGroup(2, [inlet], inlet_marker, name="inlet")
-gmsh.model.addPhysicalGroup(2, [outlet], outlet_marker, name="outlet")
-gmsh.model.addPhysicalGroup(2, walls, walls_marker, name="walls")
-gmsh.model.addPhysicalGroup(2, vacuum_surfaces, vacuum_marker, name="vacuum")
+gmsh.model.addPhysicalGroup(2, [11], inlet_marker, name="inlet")
+gmsh.model.addPhysicalGroup(2, [13], outlet_marker, name="outlet")
+gmsh.model.addPhysicalGroup(2, [14, 15, 16], walls_marker, name="walls")
+gmsh.model.addPhysicalGroup(2, [4, 7, 10], vacuum_marker, name="vacuum")
 
 
 ##### MESH SIZE & REFINEMENT #####
@@ -95,6 +88,6 @@ gmsh.model.occ.synchronize()
 gmsh.model.mesh.generate(3)
 
 ##### SAVE MESH #####
-output_file = "meshing/breeder_w_walls.msh"
+output_file = "meshing/three_volumes.msh"
 gmsh.write(output_file)
 gmsh.finalize()

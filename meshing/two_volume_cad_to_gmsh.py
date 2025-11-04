@@ -12,7 +12,7 @@ gmsh.option.setString(
 )  # make sure gmsh reads .step file in meters
 gmsh.model.add("festim_mesh")
 
-cad_file_path = "meshing/breeder_with_probe_surface.step"
+cad_file_path = "meshing/two_volumes.step"
 
 entities = gmsh.model.occ.importShapes(cad_file_path)
 gmsh.model.occ.synchronize()

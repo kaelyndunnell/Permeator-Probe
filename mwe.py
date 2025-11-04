@@ -8,6 +8,7 @@ from dolfinx.io import VTXWriter, XDMFFile, gmsh as gmshio
 import ufl
 from dolfinx import cpp as _cpp
 from dolfinx.log import set_log_level, LogLevel
+import h_transport_materials as htm
 
 
 def evaluate_stabalisation_term(mesh, u, delta):
@@ -111,13 +112,42 @@ velocity.interpolate(
     cells0=fluid_cells,
 )
 
+D_0_PbLi = 4.03e-08  # m2/s
+E_D_PbLi = 0.2021  # eV
 
-D_diff = 1e-4
+D_diff = D_0_PbLi * ufl.exp(-E_D_PbLi / (F.k_B * 500))
+
+# add stabilization term for diffusion
 D_art = evaluate_stabalisation_term(mesh=my_mesh, u=velocity, delta=0.1)
 D_expr = D_diff + D_art
-V_CG = fem.functionspace(my_mesh, ("CG", 1))
-D_fluid = fem.Function(V_CG)
-D_fluid.interpolate(fem.Expression(D_expr, V_CG.element.interpolation_points))
+V = fem.functionspace(my_mesh, ("CG", 1))
+D_fluid = fem.Function(V)
+D_fluid.interpolate(fem.Expression(D_expr, V.element.interpolation_points))
+
+# my_writer_2 = VTXWriter(MPI.COMM_WORLD, "D_field.bp", D_pbli, "BP5")
+# my_writer_2.write(t=0)
+
+breeder_material = F.Material(
+    D=D_fluid, K_S_0=1.43e23, E_K_S=0.13
+)  # https://theses.hal.science/tel-04906459v1
+
+# probe material parameters -- alpha-Fe
+htm_D_Fe = htm.diffusivities.filter(material="Fe").mean()
+htm_S_Fe = htm.solubilities.filter(material="Fe").mean()
+
+iron = F.Material(
+    D_0=htm_D_Fe.pre_exp.magnitude,
+    E_D=htm_D_Fe.act_energy.magnitude,
+    K_S_0=htm_S_Fe.pre_exp.magnitude,
+    E_K_S=htm_S_Fe.act_energy.magnitude,
+)
+
+# D_diff = 1e-4 * ufl.exp(-0.2 / (F.k_B * 500))
+# D_art = evaluate_stabalisation_term(mesh=my_mesh, u=velocity, delta=0.1)
+# D_expr = D_diff + D_art
+# V_CG = fem.functionspace(my_mesh, ("CG", 1))
+# D_fluid = fem.Function(V_CG)
+# D_fluid.interpolate(fem.Expression(D_expr, V_CG.element.interpolation_points))
 
 my_writer = VTXWriter(MPI.COMM_WORLD, "velocity_field.bp", velocity, "BP5")
 my_writer.write(t=0)
@@ -132,8 +162,8 @@ my_writer_2.write(t=0)
 #     xdmf.write_meshtags(mesh_data.cell_tags, my_mesh.geometry)
 
 
-dummy_fluid = F.Material(D=D_fluid, K_S_0=1, E_K_S=0)
-dummy_tube = F.Material(D_0=1e-04, E_D=0.1, K_S_0=2, E_K_S=0)
+# dummy_fluid = F.Material(D=D_fluid, K_S_0=1, E_K_S=0)
+dummy_tube = F.Material(D_0=3.87e-8, E_D=0.04, K_S_0=3.07e23, E_K_S=0.279)
 
 inlet = F.SurfaceSubdomain(id=inlet)
 outlet = F.SurfaceSubdomain(id=outlet)
@@ -141,7 +171,7 @@ vacuum = F.SurfaceSubdomain(id=wall_surf)
 
 fluid_sd = F.VolumeSubdomain(
     id=fluid_tag,
-    material=dummy_fluid,
+    material=breeder_material,
 )
 tube_sd = F.VolumeSubdomain(
     id=wall_tag,

@@ -47,7 +47,7 @@ def evaluate_stabalisation_term(mesh, u, delta):
 
 
 gmsh.initialize()
-gmsh.model.add("cylinder3D")
+gmsh.model.add("mwe")
 
 r_inner = 0.1
 r_tube = 0.11
@@ -85,7 +85,7 @@ gmsh.model.setPhysicalName(3, wall_tag, "wall")
 
 gmsh.option.setNumber("Mesh.MeshSizeMax", 0.05)
 gmsh.model.mesh.generate(3)
-gmsh.write("cylinder3D.msh")
+gmsh.write("mwe.msh")
 
 mesh_data = gmshio.model_to_mesh(gmsh.model, MPI.COMM_WORLD, 0, gdim=3)
 my_mesh = mesh_data.mesh

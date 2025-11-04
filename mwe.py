@@ -184,7 +184,7 @@ my_model.surface_to_volume = {inlet: fluid_sd, outlet: fluid_sd, vacuum: tube_sd
 H = F.Species("H", subdomains=my_model.volume_subdomains)
 my_model.species = [H]
 my_model.interfaces = [
-    F.Interface(id=interface_tag, subdomains=[fluid_sd, tube_sd], penalty_term=10000)
+    F.Interface(id=interface_tag, subdomains=[fluid_sd, tube_sd], penalty_term=1e25)
 ]
 my_model.temperature = 500
 

@@ -99,8 +99,6 @@ def build_festim_model(
     breeder_temperature,
     delta,
     results_folder,
-    festim_final_time,
-    steady=True,
 ):
 
     # READ OPENFOAM MESH
@@ -176,9 +174,19 @@ def build_festim_model(
         D=D_pbli, K_S_0=1.43e23, E_K_S=0.13
     )  # https://theses.hal.science/tel-04906459v1
 
+    u = htm.ureg
+    solubility_alpha_iron = htm.Solubility(
+        S_0=0.51 * u.mol * u.m**-3 * u.Pa**-0.5,
+        E_S=27 * u.kJ * u.mol**-1,
+        source="10.1016/S0022-3115(96)00670-8",
+    )
+
     # probe material parameters -- alpha-Fe
     alpha_iron = F.Material(
-        D_0=3.87e-8, E_D=0.04, K_S_0=8.467e-25, E_K_S=0.279
+        D_0=3.87e-8,
+        E_D=0.04,
+        K_S_0=solubility_alpha_iron.pre_exp.magnitude,
+        E_K_S=solubility_alpha_iron.act_energy.magnitude,
     )  # from doi: 10.1016/S0022-3115(98)00038-5
 
     # SET DOMAINS
@@ -293,8 +301,6 @@ if __name__ == "__main__":
         breeder_temperature=603.15,
         delta=0.1,
         results_folder="festim_results",
-        festim_final_time=150,  # ignored for steady state
-        steady=True,
     )
 
     # INITIALISE AND RUN

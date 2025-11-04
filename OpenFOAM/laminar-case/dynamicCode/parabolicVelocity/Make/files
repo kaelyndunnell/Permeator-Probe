@@ -1,6 +1,6 @@
 # dynamicCode:
-# SHA1 = b1a6224189253c5713b5d843663ab0769b73c881
+# SHA1 = f5e1e892001eae50a9048651c237551098fe8c1c
 
 codedFixedValueFvPatchFieldTemplate.C
 
-LIB = $(PWD)/../platforms/$(WM_OPTIONS)/lib/libparabolicVelocity_b1a6224189253c5713b5d843663ab0769b73c881
+LIB = $(PWD)/../platforms/$(WM_OPTIONS)/lib/libparabolicVelocity_f5e1e892001eae50a9048651c237551098fe8c1c

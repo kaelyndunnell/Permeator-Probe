@@ -32,15 +32,15 @@ FoamFile
     }
     wall
     {
-        type            patch;
-        physicalType    patch;
+        type            wall;
+        physicalType    wall;
         nFaces          7986;
         startFace       1783653;
     }
     probe
     {
-        type            patch;
-        physicalType    patch;
+        type            wall;
+        physicalType    wall;
         nFaces          26458;
         startFace       1791639;
     }

@@ -5,15 +5,23 @@
     \\  /    A nd           | Version:  13
      \\/     M anipulation  |
 \*---------------------------------------------------------------------------*/
-FoamFile
-{
-    format      ascii;
-    class       dictionary;
-    location    "constant";
-    object      momentumTransport;
+FoamFile {
+  format ascii;
+  class dictionary;
+  location "constant";
+  object momentumTransport;
 }
+
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-simulationType laminar;
+/* simulationType laminar; */
+simulationType RAS;
+
+RAS
+{
+    model           kEpsilon;
+
+    turbulence      on;
+}
 
 // ************************************************************************* //

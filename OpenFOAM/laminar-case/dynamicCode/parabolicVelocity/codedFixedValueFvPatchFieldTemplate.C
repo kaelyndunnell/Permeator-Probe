@@ -52,11 +52,11 @@ namespace Foam
 extern "C"
 {
     // dynamicCode:
-    // SHA1 = b1a6224189253c5713b5d843663ab0769b73c881
+    // SHA1 = f5e1e892001eae50a9048651c237551098fe8c1c
     //
     // unique function name that can be checked if the correct library version
     // has been loaded
-    void parabolicVelocity_b1a6224189253c5713b5d843663ab0769b73c881(bool load)
+    void parabolicVelocity_f5e1e892001eae50a9048651c237551098fe8c1c(bool load)
     {
         if (load)
         {
@@ -79,7 +79,7 @@ makeRemovablePatchTypeField
 
 
 const char* const parabolicVelocityFixedValueFvPatchVectorField::SHA1sum =
-    "b1a6224189253c5713b5d843663ab0769b73c881";
+    "f5e1e892001eae50a9048651c237551098fe8c1c";
 
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
@@ -96,7 +96,7 @@ parabolicVelocityFixedValueFvPatchVectorField
 {
     if (false)
     {
-        Info<<"construct parabolicVelocity sha1: b1a6224189253c5713b5d843663ab0769b73c881"
+        Info<<"construct parabolicVelocity sha1: f5e1e892001eae50a9048651c237551098fe8c1c"
             " from patch/dictionary\n";
     }
 }
@@ -115,7 +115,7 @@ parabolicVelocityFixedValueFvPatchVectorField
 {
     if (false)
     {
-        Info<<"construct parabolicVelocity sha1: b1a6224189253c5713b5d843663ab0769b73c881"
+        Info<<"construct parabolicVelocity sha1: f5e1e892001eae50a9048651c237551098fe8c1c"
             " from patch/DimensionedField/mapper\n";
     }
 }
@@ -132,7 +132,7 @@ parabolicVelocityFixedValueFvPatchVectorField
 {
     if (false)
     {
-        Info<<"construct parabolicVelocity sha1: b1a6224189253c5713b5d843663ab0769b73c881 "
+        Info<<"construct parabolicVelocity sha1: f5e1e892001eae50a9048651c237551098fe8c1c "
             "as copy/DimensionedField\n";
     }
 }
@@ -145,7 +145,7 @@ parabolicVelocityFixedValueFvPatchVectorField::
 {
     if (false)
     {
-        Info<<"destroy parabolicVelocity sha1: b1a6224189253c5713b5d843663ab0769b73c881\n";
+        Info<<"destroy parabolicVelocity sha1: f5e1e892001eae50a9048651c237551098fe8c1c\n";
     }
 }
 
@@ -161,18 +161,18 @@ void parabolicVelocityFixedValueFvPatchVectorField::updateCoeffs()
 
     if (false)
     {
-        Info<<"updateCoeffs parabolicVelocity sha1: b1a6224189253c5713b5d843663ab0769b73c881\n";
+        Info<<"updateCoeffs parabolicVelocity sha1: f5e1e892001eae50a9048651c237551098fe8c1c\n";
     }
 
 //{{{ begin code
-    #line 44 "/home/ubuntu/OpenFOAM/kae-13/permeator-probe/0/U/inlet"
+    #line 42 "/home/jdark/repos/Permeator-Probe/OpenFOAM/turbulent-case/0/U/inlet"
 
             const vectorField& Cf = patch().Cf();
             vectorField& field = *this;
 
             const scalar c = 0; 
             const scalar r = 0.065;
-            const scalar Umax = 0.0076;
+            const scalar Umax = 0.002;
 
 
             forAll(Cf, faceI)
@@ -182,8 +182,6 @@ void parabolicVelocityFixedValueFvPatchVectorField::updateCoeffs()
                 const scalar rCoord = sqrt(pow(x - c, 2) + pow(z - c, 2));
 
                 field[faceI] = vector(0, Umax * (1 - 0.5 * pow(rCoord / r, 2)), 0);
-
-
 
             }
         

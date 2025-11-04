@@ -91,7 +91,6 @@ gmsh.model.addPhysicalGroup(2, vacuum_surfaces, vacuum_marker, name="vacuum")
 gmsh.option.setNumber("Mesh.MeshSizeFromCurvature", 10)
 
 ##### SYNC & GENERATE MESH #####
-gmsh.option.setNumber("Mesh.MshFileVersion", 2.2)
 gmsh.model.occ.synchronize()
 gmsh.model.mesh.generate(3)
 

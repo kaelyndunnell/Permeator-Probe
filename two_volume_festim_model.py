@@ -140,6 +140,9 @@ def build_festim_model(
     )  # u is a fem.function.Function! paraview visualization of u_openfoam is accurate with this formulation
     festim_velocity = fem.Function(V_festim)
 
+    # my_writer = VTXWriter(MPI.COMM_WORLD, "openfoam_velocity.bp", u_openfoam, "BP5")
+    # my_writer.write(t=0)
+
     festim_cells = festim_mesh_data.cell_tags.find(2)  # breeder cells to interpolate to
 
     interpolation_data = fem.create_interpolation_data(
@@ -266,12 +269,12 @@ def build_festim_model(
 
     # EXPORTS
 
-    # outlet_advective_flux = SurfaceAdvectionFlux(
-    #     field=H,
-    #     surface=outlet,
-    #     filename=f"{results_folder}/outlet_advective_flux.csv",
-    #     velocity_field=festim_velocity,
-    # )
+    outlet_advective_flux = SurfaceAdvectionFlux(
+        field=H,
+        surface=outlet,
+        filename=f"{results_folder}/outlet_advective_flux.csv",
+        velocity_field=festim_velocity,
+    )
     permeation_flux = F.SurfaceFlux(
         field=H, surface=vacuum, filename=f"{results_folder}/permeation_flux.csv"
     )
@@ -284,7 +287,7 @@ def build_festim_model(
     )
 
     my_model.exports = [
-        # outlet_advective_flux,
+        outlet_advective_flux,
         permeation_flux,
         concentration_field_breeder,
         concentration_field_probe,

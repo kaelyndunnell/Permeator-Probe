@@ -150,37 +150,40 @@ def plot_reynolds_number_vs_inlet_velocity(
     plt.show()
 
 
-if __name__ == "__main__":
+# reference: https://www.openfoam.com/documentation/guides/latest/doc/guide-turbulence-ras-k-epsilon.html
 
-    breeder = "LiPb"
 
-    flow_rate = 1  # kg/s ; from Utili 2023
-    inlet_diameter = 0.13  # m from CAD
+def calculate_initial_k(inlet_velocity):
+    """Calculate initial turbulence kinetic energy.
 
-    breeder_temperature = 603.15  # K from Utili 2023
-    LiPb_density = (
-        10520.35 - 1.19051 * breeder_temperature
-    )  # kg/m3 ; equation from Martelli 2019
-    tube_diameter = 13e-2  # m, diameter of tube from CAD
+    Parameters
+    ----------
+    inlet_velocity : float
+        Inlet velocity in m/s.
 
-    k_b = 8.617e-5  # eV/K, boltzmann constant
-    E_D = 19500 * 1.0364e-5  # = 0.202098
-    LiPb_diffusivity = 4.03e-8 * np.exp(
-        -E_D / (k_b * breeder_temperature)
-    )  # m2/s ; from Utili 2023, 1 J/mol = 1.0364E-5eV
+    Returns
+    -------
+    float
+        Initial turbulence kinetic energy in m2/s2.
+    """
 
-    inlet_velocity = calculate_inlet_velocity(
-        flow_rate, inlet_diameter, LiPb_density, breeder
-    )
+    # assume initial turbulence is isotropic so that U'2_x = U'2_y = U'2_z
+    return (3 / 2) * (0.05 * inlet_velocity) ** 2  # 5% of inlet velocity
 
-    kinematic_viscosity = calculate_kinematic_viscosity(
-        breeder_temperature, LiPb_density, breeder
-    )
 
-    Re = calculate_reynolds_number(
-        inlet_velocity, tube_diameter, kinematic_viscosity, breeder
-    )
+def calculate_initial_epsilon(k, characteristic_length):
+    """Calculate initial turbulence dissipation rate.
 
-    plot_reynolds_number_vs_inlet_velocity(
-        tube_diameter, kinematic_viscosity, breeder_temperature, breeder
-    )
+    Parameters
+    ----------
+    k : float
+        Initial turbulence kinetic energy in m2/s2.
+    characteristic_length : float
+        Characteristic length in m.
+
+    Returns
+    -------
+    float
+        Initial turbulence dissipation rate in m2/s3.
+    """
+    return 0.09 ** (3 / 4) * k ** (3 / 2) / characteristic_length

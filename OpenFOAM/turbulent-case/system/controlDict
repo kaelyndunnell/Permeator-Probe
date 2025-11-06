@@ -24,7 +24,7 @@ stopAt          endTime;
 
 endTime         301;          // Number of iterations for steady-state
 
-deltaT          0.005;            // Time step (irrelevant for steady-state, but kept)
+deltaT          1e-6;            // Time step (irrelevant for steady-state, but kept)
 
 writeControl    adjustableRunTime;
 

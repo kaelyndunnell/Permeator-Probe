@@ -7,10 +7,11 @@ from fluid_parameters import (
 )
 import numpy as np
 import festim as F
+import h_transport_materials as htm
 
 
-def calculate_LiPb_kinematic_viscosity(breeder_temperature, breeder_density, breeder):
-    """Calculate the kinematic viscosity of LiPb at a given temperature and density.
+def calculate_FLiBe_kinematic_viscosity(breeder_temperature, breeder_density, breeder):
+    """Calculate the kinematic viscosity of FLiBe at a given temperature and density.
     Used for OpenFOAM simulation.
 
     Parameters
@@ -27,12 +28,9 @@ def calculate_LiPb_kinematic_viscosity(breeder_temperature, breeder_density, bre
     float
         Kinematic viscosity in m2/s.
     """
-    breeder_dynamic_viscosity = (
-        0.0061091
-        - 2.2574e-5 * breeder_temperature
-        + 3.766e-8 * breeder_temperature**2
-        - 2.2887e-11 * breeder_temperature**3
-    )  # Pa.s = kg s / m s2; equation from Martelli 2019
+    breeder_dynamic_viscosity = 0.000116 * np.exp(
+        3755 / breeder_temperature
+    )  # Pa.s = kg s / m s2; equation from Williams 2006
 
     kinematic_viscosity = breeder_dynamic_viscosity / breeder_density  # m2/s
 
@@ -43,28 +41,31 @@ def calculate_LiPb_kinematic_viscosity(breeder_temperature, breeder_density, bre
     return kinematic_viscosity
 
 
-breeder = "LiPb"
+breeder = "FLiBe"
 
-flow_rate = 1  # kg/s ; from Utili 2023
+breeder_temperature = 900  # K from Meschini 2021
+FLiBe_density = 2245 - 0.424 * (
+    breeder_temperature - 273.15
+)  # kg/m3 ; equation from Vidrio 2022
+
+flow_rate = 50 / 1000 * FLiBe_density / 1000 / 60  # kg/s, given as 50 ml/min from KF
+
 inlet_diameter = 0.13  # m from CAD
 
-breeder_temperature = 603.15  # K from Utili 2023
-LiPb_density = (
-    10520.35 - 1.19051 * breeder_temperature
-)  # kg/m3 ; equation from Martelli 2019
-
 k_b = F.k_B  # eV/K, boltzmann constant
-E_D = 19500 * 1.0364e-5  # = 0.202098
-LiPb_diffusivity = 4.03e-8 * np.exp(
-    -E_D / (k_b * breeder_temperature)
-)  # m2/s ; from Utili 2023, 1 J/mol = 1.0364E-5eV
+
+flibe_diffusivity = htm.diffusivities.filter(material=htm.FLIBE).mean()
+E_D = flibe_diffusivity.act_energy.magnitude  # eV
+D_0 = flibe_diffusivity.pre_exp.magnitude  # m2/s
+
+FLiBe_diffusivity = D_0 * np.exp(-E_D / (k_b * breeder_temperature))  # m2/s
 
 inlet_velocity = calculate_inlet_velocity(
-    flow_rate, inlet_diameter, LiPb_density, breeder
+    flow_rate, inlet_diameter, FLiBe_density, breeder
 )
 
-kinematic_viscosity = calculate_LiPb_kinematic_viscosity(
-    breeder_temperature, LiPb_density, breeder
+kinematic_viscosity = calculate_FLiBe_kinematic_viscosity(
+    breeder_temperature, FLiBe_density, breeder
 )
 
 Re = calculate_reynolds_number(

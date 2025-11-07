@@ -33,40 +33,6 @@ def calculate_inlet_velocity(flow_rate, inlet_diameter, breeder_density, breeder
     return inlet_velocity
 
 
-def calculate_kinematic_viscosity(breeder_temperature, breeder_density, breeder):
-    """Calculate the kinematic viscosity of a fluid breeder at a given temperature and density.
-    Used for OpenFOAM simulation.
-
-    Parameters
-    ----------
-    breeder_temperature : float
-        Breeder temperature in K.
-    breeder_density : float
-        Breeder density in kg/m3.
-     breeder : str
-        Breeder fluid name.
-
-    Returns
-    -------
-    float
-        Kinematic viscosity in m2/s.
-    """
-    breeder_dynamic_viscosity = (
-        0.0061091
-        - 2.2574e-5 * breeder_temperature
-        + 3.766e-8 * breeder_temperature**2
-        - 2.2887e-11 * breeder_temperature**3
-    )  # Pa.s = kg s / m s2; equation from Martelli 2019
-
-    kinematic_viscosity = breeder_dynamic_viscosity / breeder_density  # m2/s
-
-    print(
-        f"Kinematic viscosity of {breeder} at {breeder_temperature}K is {kinematic_viscosity}m2/s."
-    )
-
-    return kinematic_viscosity
-
-
 def calculate_reynolds_number(
     inlet_velocity,
     characteristic_length,

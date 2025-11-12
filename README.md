@@ -23,3 +23,41 @@ Then, activate the environment:
 ```
 conda activate permeator-probe-env
 ```
+
+## Workflow: 
+
+To run the OpenFOAM simulation, first create the mesh: 
+
+ ```
+ python meshing/cad_to_gmsh_for_openfoam.py
+ ```
+
+ Convert mesh to OpenFOAM format: 
+
+ ```
+ mv meshing/openfoam_mesh.msh OpenFOAM/laminar-case
+ cd OpenFOAM/laminar-case
+ gmshToFoam openfoam_mesh.msh
+ ```
+
+ > **_NOTE:_**  Ensure the bounding box of the mesh is in the proper units -- with our geometry, it should be `(-0.067 -0.1 -0.067) (0.067 0.1 0.067)`. If it isn't, use the `transformPoints` command accordingly.
+
+ Check the mesh: 
+
+ ```
+ checkMesh
+ ```
+ 
+ Finally, run the OpenFOAM simulation:
+
+ ```
+ foamRun -solver incompressibleFluid
+ ```
+
+When the OpenFOAM simulation is finished, the results can be fed into the FESTIM simulation by running: 
+
+```
+python two_volume_festim_model.py
+```
+
+The results can be read from the `festim_results` folder that is created from the FESTIM simulation. 

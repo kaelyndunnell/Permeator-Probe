@@ -26,7 +26,7 @@ conda activate permeator-probe-env
 
 ## Workflow: 
 
-Create mesh: 
+To run the OpenFOAM simulation, first create the mesh: 
 
  ```
  python meshing/cad_to_gmsh.py
@@ -48,3 +48,10 @@ Create mesh:
  foamRun -solver incompressibleFluid
  ```
 
+When the OpenFOAM simulation is finished, the results can be fed into the FESTIM simulation by running: 
+
+```
+python two_volume_festim_model.py
+```
+
+The results can be read from the `festim_results` folder that is created from the FESTIM simulation. 

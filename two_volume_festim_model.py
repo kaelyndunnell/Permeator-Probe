@@ -99,6 +99,7 @@ def build_festim_model(
     breeder_temperature,
     delta,
     results_folder,
+    insulated=True,
 ):
 
     # READ OPENFOAM MESH
@@ -254,10 +255,28 @@ def build_festim_model(
 
     print(f"Inlet Concentration is {c_in} #/m3.")
 
+    alpha_Fe_recombination = htm.recombination_coeffs.filter(material=htm.IRON)[0]
+
+    surface_reaction_h2 = F.SurfaceReactionBC(
+        reactant=[H, H],
+        gas_pressure=0,  # assume 0 because vacuum
+        k_r0=alpha_Fe_recombination.pre_exp.magnitude,
+        E_kr=alpha_Fe_recombination.act_energy.magnitude,
+        k_d0=0,  # assume 0 because vacuum
+        E_kd=0,
+        subdomain=vacuum,
+    )
+
     my_model.boundary_conditions = [
         F.FixedConcentrationBC(subdomain=inlet, value=c_in, species=H),
         F.FixedConcentrationBC(subdomain=vacuum, value=0, species=H),
+        # surface_reaction_h2,
     ]
+
+    if not insulated:
+        my_model.boundary_conditions.append(
+            F.FixedConcentrationBC(subdomain=wall, value=0, species=H)
+        )
 
     # SETTINGS
 
@@ -299,11 +318,12 @@ def build_festim_model(
 if __name__ == "__main__":
 
     my_model = build_festim_model(
-        openfoam_data_file="OpenFOAM/laminar-case/probe.foam",
-        openfoam_final_time=300,
+        openfoam_data_file="OpenFOAM/k-epsilon-turbulent-case/case.foam",
+        openfoam_final_time=1598,
         breeder_temperature=603.15,
         delta=0.1,
         results_folder="festim_results",
+        insulated=True,
     )
 
     # INITIALISE AND RUN

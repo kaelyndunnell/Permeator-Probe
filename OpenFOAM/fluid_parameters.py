@@ -153,3 +153,21 @@ def calculate_initial_epsilon(k, characteristic_length):
         Initial turbulence dissipation rate in m2/s3.
     """
     return 0.09 ** (3 / 4) * k ** (3 / 2) / characteristic_length
+
+
+def calculate_initial_omega(k, characteristic_length):
+    """Calculate initial specific dissipation rate.
+
+    Parameters
+    ----------
+    k : float
+        Initial turbulence kinetic energy in m2/s2.
+    characteristic_length : float
+        Characteristic length in m.
+
+    Returns
+    -------
+    float
+        Initial specific dissipation rate in 1/s.
+    """
+    return np.sqrt(k) / (0.09 ** (1 / 4) * characteristic_length)

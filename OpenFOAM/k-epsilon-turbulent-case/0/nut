@@ -19,7 +19,8 @@ boundaryField
     }
     outlet
     {
-        type            zeroGradient;
+        type            calculated;
+        value           uniform 0;
     }
     wall
     {

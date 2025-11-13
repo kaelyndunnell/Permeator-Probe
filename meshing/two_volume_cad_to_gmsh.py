@@ -74,6 +74,37 @@ gmsh.model.addPhysicalGroup(2, vacuum_surfaces, vacuum_marker, name="vacuum")
 ##### MESH SIZE & REFINEMENT #####
 gmsh.option.setNumber("Mesh.MeshSizeFromCurvature", 10)
 
+gmsh.model.occ.synchronize()
+
+# refinement for tube with boundary layer refinement
+inlet_outlet_walls = [
+    inlet,
+    outlet,
+    walls,
+]  # set distance field near inlet, outlet, and wall surfaces
+
+distance_field = gmsh.model.mesh.field.add("Distance")
+gmsh.model.mesh.field.setNumbers(distance_field, "FacesList", inlet_outlet_walls)
+
+# use threshold field to refine near surfaces
+threshold_field = gmsh.model.mesh.field.add("Threshold")
+gmsh.model.mesh.field.setNumber(threshold_field, "IField", distance_field)
+gmsh.model.mesh.field.setNumber(
+    threshold_field, "SizeMin", 0.01
+)  # smallest mesh size near surfaces
+gmsh.model.mesh.field.setNumber(
+    threshold_field, "SizeMax", 0.2
+)  # mesh size far from surfaces
+gmsh.model.mesh.field.setNumber(
+    threshold_field, "DistMin", 0.05
+)  # distance where within which mesh is fully refined
+gmsh.model.mesh.field.setNumber(
+    threshold_field, "DistMax", 0.1
+)  # distance where mesh transitions to coarse size
+
+# set threshold field as background field (doesn't impact probe surface)
+gmsh.model.mesh.field.setAsBackgroundMesh(threshold_field)
+
 ##### SYNC & GENERATE MESH #####
 gmsh.model.occ.synchronize()
 gmsh.model.mesh.generate(3)

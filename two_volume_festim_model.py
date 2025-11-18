@@ -7,7 +7,6 @@ import ufl
 from dolfinx import cpp as _cpp
 from openfoam_to_festim import read_openfoam_data
 from dolfinx.log import set_log_level, LogLevel
-import matplotlib.pyplot as plt
 from dolfinx.io import gmsh as gmshio
 from mpi4py import MPI
 from basix.ufl import element
@@ -98,8 +97,10 @@ def build_festim_model(
     openfoam_final_time,
     breeder_temperature,
     delta,
+    c_in,
     results_folder,
     insulated=True,
+    visualize_fields=False,
 ):
 
     # READ OPENFOAM MESH
@@ -154,9 +155,6 @@ def build_festim_model(
         u_openfoam, cells=festim_cells, interpolation_data=interpolation_data
     )
 
-    # my_writer = VTXWriter(MPI.COMM_WORLD, "velocity_field.bp", festim_velocity, "BP5")
-    # my_writer.write(t=0)
-
     D_0_PbLi = 4.03e-08  # m2/s
     E_D_PbLi = 0.2021  # eV
 
@@ -171,8 +169,13 @@ def build_festim_model(
     D_pbli = fem.Function(V)
     D_pbli.interpolate(fem.Expression(D_expr, V.element.interpolation_points))
 
-    # my_writer_2 = VTXWriter(MPI.COMM_WORLD, "D_field.bp", D_pbli, "BP5")
-    # my_writer_2.write(t=0)
+    if visualize_fields:
+        my_writer = VTXWriter(
+            MPI.COMM_WORLD, "velocity_field.bp", festim_velocity, "BP5"
+        )
+        my_writer.write(t=0)
+        my_writer_2 = VTXWriter(MPI.COMM_WORLD, "D_field.bp", D_pbli, "BP5")
+        my_writer_2.write(t=0)
 
     breeder_material = F.Material(
         D=D_pbli, K_S_0=1.43e23, E_K_S=0.13
@@ -248,16 +251,9 @@ def build_festim_model(
     advection = F.AdvectionTerm(velocity=festim_velocity, subdomain=breeder, species=H)
     my_model.advection_terms = [advection]
 
-    N_A = 6.022e23
-    c_in = (
-        1.5e-2 * N_A
-    )  # atms/m3 , inspired by tritium concentration (mol/m3) of OB loop from Utili 2023
-
-    print(f"Inlet Concentration is {c_in} #/m3.")
-
     alpha_Fe_recombination = htm.recombination_coeffs.filter(material=htm.IRON)[0]
 
-    surface_reaction_h2 = F.SurfaceReactionBC(
+    vacuum_surface_reaction_h2 = F.SurfaceReactionBC(
         reactant=[H, H],
         gas_pressure=0,  # assume 0 because vacuum
         k_r0=alpha_Fe_recombination.pre_exp.magnitude,
@@ -270,10 +266,20 @@ def build_festim_model(
     my_model.boundary_conditions = [
         F.FixedConcentrationBC(subdomain=inlet, value=c_in, species=H),
         F.FixedConcentrationBC(subdomain=vacuum, value=0, species=H),
-        # surface_reaction_h2,
+        # vacuum_surface_reaction_h2,
     ]
 
     if not insulated:
+        wall_surface_reaction_h2 = F.SurfaceReactionBC(
+            reactant=[H, H],
+            gas_pressure=0,  # assume 0 because vacuum
+            k_r0=alpha_Fe_recombination.pre_exp.magnitude,
+            E_kr=alpha_Fe_recombination.act_energy.magnitude,
+            k_d0=0,  # assume 0 because vacuum
+            E_kd=0,
+            subdomain=wall,
+        )
+        # my_model.boundary_conditions.append(wall_surface_reaction_h2)
         my_model.boundary_conditions.append(
             F.FixedConcentrationBC(subdomain=wall, value=0, species=H)
         )
@@ -317,13 +323,22 @@ def build_festim_model(
 
 if __name__ == "__main__":
 
+    N_A = 6.022e23
+    c_in = (
+        1.5e-2 * N_A
+    )  # atms/m3 , inspired by tritium concentration (mol/m3) of OB loop from Utili 2023
+
+    print(f"Inlet Concentration is {c_in} #/m3.")
+
     my_model = build_festim_model(
-        openfoam_data_file="OpenFOAM/k-epsilon-turbulent-case/case.foam",
-        openfoam_final_time=1598,
+        openfoam_data_file="OpenFOAM/laminar-case/probe.foam",
+        openfoam_final_time=300,
         breeder_temperature=603.15,
         delta=0.1,
+        c_in=c_in,
         results_folder="festim_results",
         insulated=True,
+        visualize_fields=True,
     )
 
     # INITIALISE AND RUN

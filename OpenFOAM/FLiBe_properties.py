@@ -10,7 +10,12 @@ import festim as F
 import h_transport_materials as htm
 
 
-def calculate_FLiBe_kinematic_viscosity(breeder_temperature, breeder_density, breeder):
+def calculate_FLiBe_kinematic_viscosity(
+    breeder_temperature,
+    breeder_density,
+    breeder,
+    suppress_print=False,
+):
     """Calculate the kinematic viscosity of FLiBe at a given temperature and density.
     Used for OpenFOAM simulation.
 
@@ -34,9 +39,10 @@ def calculate_FLiBe_kinematic_viscosity(breeder_temperature, breeder_density, br
 
     kinematic_viscosity = breeder_dynamic_viscosity / breeder_density  # m2/s
 
-    print(
-        f"Kinematic viscosity of {breeder} at {breeder_temperature}K is {kinematic_viscosity}m2/s."
-    )
+    if not suppress_print:
+        print(
+            f"Kinematic viscosity of {breeder} at {breeder_temperature}K is {kinematic_viscosity}m2/s."
+        )
 
     return kinematic_viscosity
 

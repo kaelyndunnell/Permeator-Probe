@@ -67,25 +67,25 @@ LiPb_diffusivity = 4.03e-8 * np.exp(
 )  # m2/s ; from Utili 2023, 1 J/mol = 1.0364E-5eV
 
 inlet_velocity = calculate_inlet_velocity(
-    flow_rate, inlet_diameter, LiPb_density, breeder
+    flow_rate, inlet_diameter, LiPb_density, breeder, suppress_print=True
 )
 
 kinematic_viscosity = calculate_LiPb_kinematic_viscosity(
-    breeder_temperature, LiPb_density, breeder
+    breeder_temperature, LiPb_density, breeder, suppress_print=True
 )
 
 Re = calculate_reynolds_number(
-    inlet_velocity, inlet_diameter, kinematic_viscosity, breeder
+    inlet_velocity, inlet_diameter, kinematic_viscosity, breeder, suppress_print=True
 )
 
 k = calculate_initial_k(inlet_velocity)
 epsilon = calculate_initial_epsilon(k, characteristic_length=inlet_diameter)
 omega = calculate_initial_omega(k, inlet_diameter)
 
-print(f"Density of {breeder} at {breeder_temperature}K is {LiPb_density}kg/m3.")
-print(f"Initial turbulence kinetic energy for {breeder}: {k} m2/s2")
-print(f"Initial turbulence dissipation rate for {breeder}: {epsilon} m2/s3")
-print(f"Initial specific dissipation rate for {breeder}: {omega} 1/s")
+# print(f"Density of {breeder} at {breeder_temperature}K is {LiPb_density}kg/m3.")
+# print(f"Initial turbulence kinetic energy for {breeder}: {k} m2/s2")
+# print(f"Initial turbulence dissipation rate for {breeder}: {epsilon} m2/s3")
+# print(f"Initial specific dissipation rate for {breeder}: {omega} 1/s")
 
 # plot_reynolds_number_vs_inlet_velocity(
 #     inlet_diameter, kinematic_viscosity, breeder_temperature, breeder

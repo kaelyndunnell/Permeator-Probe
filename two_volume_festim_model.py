@@ -142,8 +142,8 @@ def build_festim_model(
     )  # u is a fem.function.Function! paraview visualization of u_openfoam is accurate with this formulation
     festim_velocity = fem.Function(V_festim)
 
-    # my_writer = VTXWriter(MPI.COMM_WORLD, "openfoam_velocity.bp", u_openfoam, "BP5")
-    # my_writer.write(t=0)
+    my_writer = VTXWriter(MPI.COMM_WORLD, "openfoam_velocity.bp", u_openfoam, "BP5")
+    my_writer.write(t=0)
 
     festim_cells = festim_mesh_data.cell_tags.find(2)  # breeder cells to interpolate to
 
@@ -331,8 +331,8 @@ if __name__ == "__main__":
     print(f"Inlet Concentration is {c_in} #/m3.")
 
     my_model = build_festim_model(
-        openfoam_data_file="OpenFOAM/laminar-case/probe.foam",
-        openfoam_final_time=300,
+        openfoam_data_file="OpenFOAM/kOmega-case/case.foam",
+        openfoam_final_time=208,
         breeder_temperature=603.15,
         delta=0.1,
         c_in=c_in,

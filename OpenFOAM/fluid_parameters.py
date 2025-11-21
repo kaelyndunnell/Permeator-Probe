@@ -75,7 +75,11 @@ def calculate_reynolds_number(
 
 
 def plot_reynolds_number_vs_inlet_velocity(
-    characteristic_length, kinematic_viscosity, breeder_temperature, breeder
+    characteristic_length,
+    kinematic_viscosity,
+    breeder_temperature,
+    breeder,
+    model_velocity,
 ):
     """Plot the reynolds number of a fluid breeder with varying inlet velocities.
     Assumes constant characteristic length and kinematic viscosity.
@@ -107,6 +111,7 @@ def plot_reynolds_number_vs_inlet_velocity(
 
     plt.plot(inlet_velocities, Re_numbers, "b-")
     plt.axhline(y=3500, color="r", linestyle="--", label="Turbulence Threshold")
+    plt.axvline(x=model_velocity, color="g", label="Model Inlet Velocity")
     plt.xlabel("Inlet Velocity (m/s)")
     plt.ylabel("Reynolds Number")
     plt.title(

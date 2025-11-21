@@ -60,8 +60,6 @@ LiPb_density = (
     10520.35 - 1.19051 * breeder_temperature
 )  # kg/m3 ; equation from Martelli 2019
 
-print(f"Density of {breeder} at {breeder_temperature}K is {LiPb_density}kg/m3.")
-
 k_b = F.k_B  # eV/K, boltzmann constant
 E_D = 19500 * 1.0364e-5  # = 0.202098
 LiPb_diffusivity = 4.03e-8 * np.exp(
@@ -82,11 +80,11 @@ Re = calculate_reynolds_number(
 
 k = calculate_initial_k(inlet_velocity)
 epsilon = calculate_initial_epsilon(k, characteristic_length=inlet_diameter)
+omega = calculate_initial_omega(k, inlet_diameter)
 
+print(f"Density of {breeder} at {breeder_temperature}K is {LiPb_density}kg/m3.")
 print(f"Initial turbulence kinetic energy for {breeder}: {k} m2/s2")
 print(f"Initial turbulence dissipation rate for {breeder}: {epsilon} m2/s3")
-
-omega = calculate_initial_omega(k, inlet_diameter)
 print(f"Initial specific dissipation rate for {breeder}: {omega} 1/s")
 
 # plot_reynolds_number_vs_inlet_velocity(

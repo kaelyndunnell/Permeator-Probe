@@ -35,7 +35,7 @@ LiPb_diffusivity = 4.03e-8 * np.exp(
     -E_D / (k_b * breeder_temperature)
 )  # m2/s ; from Utili 2023, 1 J/mol = 1.0364E-5eV
 kinematic_viscosity = calculate_LiPb_kinematic_viscosity(
-    breeder_temperature, LiPb_density, breeder
+    breeder_temperature, LiPb_density, breeder, suppress_print=True
 )
 
 # FLOW RATE PARAMETRIZATION
@@ -43,7 +43,7 @@ flow_rates = [1, 2, 3, 4]  # kg/s ; from Utili 2023
 
 for rate in flow_rates:
     inlet_velocity = calculate_inlet_velocity(
-        rate, inlet_diameter, LiPb_density, breeder
+        rate, inlet_diameter, LiPb_density, breeder, suppress_print=True
     )
     Re = calculate_reynolds_number(
         inlet_velocity,
@@ -53,19 +53,56 @@ for rate in flow_rates:
         suppress_print=True,
     )
     k = calculate_initial_k(inlet_velocity)
-    # epsilon = calculate_initial_epsilon(k, characteristic_length=inlet_diameter)
+    epsilon = calculate_initial_epsilon(k, characteristic_length=inlet_diameter)
     omega = calculate_initial_omega(k, inlet_diameter)
 
-    # TODO: add suppress print function
+    exit()
 
-    openfoam_folder = f"OpenFOAM/flow_rate_parametrization/probe_case_{rate}_kg_s-1"
-    os.makedirs(openfoam_folder, exist_ok=True)
+    openfoam_folder_kEpsilon = (
+        f"OpenFOAM/flow_rate_parametrization/probe_case_{rate}_kEpsilon"
+    )
+    openfoam_folder_kOmega = (
+        f"OpenFOAM/flow_rate_parametrization/probe_case_{rate}_kOmega"
+    )
+    os.makedirs(openfoam_folder_kEpsilon, exist_ok=True)
+    os.makedirs(openfoam_folder_kOmega, exist_ok=True)
 
+    # kEpsilon case
     shutil.copytree(
-        "OpenFOAM/kOmega-case/0/", openfoam_folder + "/0"
+        "OpenFOAM/k-epsilon-turbulent-case/0/", openfoam_folder_kEpsilon + "/0"
     )  # p, nut files are the same as benchmark kOmega case
-    shutil.copytree("OpenFOAM/kOmega-case/system/", openfoam_folder + "/system")
-    shutil.copytree("OpenFOAM/kOmega-case/constant/", openfoam_folder + "/constant")
+    shutil.copytree(
+        "OpenFOAM/k-epsilon-turbulent-case/system/",
+        openfoam_folder_kEpsilon + "/system",
+    )
+    shutil.copytree(
+        "OpenFOAM/k-epsilon-turbulent-case/constant/",
+        openfoam_folder_kEpsilon + "/constant",
+    )
+
+    variables_dict = {
+        "U": [0.0076, inlet_velocity],
+        "k": [2.215e-07, k],
+        "epsilon": [1.317e-10, epsilon],
+    }
+
+    for name, values in variables_dict.items():
+        change_variable_in_openfoam_file(
+            filename=openfoam_folder_kEpsilon + "/0/" + name,
+            old_value=values[0],
+            new_value=values[1],
+        )
+
+    shutil.copy("meshing/openfoam_mesh.msh", openfoam_folder_kOmega)
+
+    # kOmega case
+    shutil.copytree(
+        "OpenFOAM/kOmega-case/0/", openfoam_folder_kOmega + "/0"
+    )  # p, nut files are the same as benchmark kOmega case
+    shutil.copytree("OpenFOAM/kOmega-case/system/", openfoam_folder_kOmega + "/system")
+    shutil.copytree(
+        "OpenFOAM/kOmega-case/constant/", openfoam_folder_kOmega + "/constant"
+    )
 
     variables_dict = {
         "U": [0.0076, inlet_velocity],
@@ -75,9 +112,9 @@ for rate in flow_rates:
 
     for name, values in variables_dict.items():
         change_variable_in_openfoam_file(
-            filename=openfoam_folder + "/0/" + name,
+            filename=openfoam_folder_kOmega + "/0/" + name,
             old_value=values[0],
             new_value=values[1],
         )
 
-# then need to have some way to run the openfoam simulations directly from this file
+    shutil.copy("meshing/openfoam_mesh.msh", openfoam_folder_kOmega)

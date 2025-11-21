@@ -56,8 +56,6 @@ for rate in flow_rates:
     epsilon = calculate_initial_epsilon(k, characteristic_length=inlet_diameter)
     omega = calculate_initial_omega(k, inlet_diameter)
 
-    exit()
-
     openfoam_folder_kEpsilon = (
         f"OpenFOAM/flow_rate_parametrization/probe_case_{rate}_kEpsilon"
     )

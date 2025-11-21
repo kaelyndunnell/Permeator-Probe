@@ -3,8 +3,8 @@ import os
 from dolfinx import plot
 import pyvista
 import numpy as np
-from dolfinx.io import gmshio
 from mpi4py import MPI
+from dolfinx.io import gmsh as gmshio
 
 ########################################
 ###### CREATE MESH FROM CAD MODEL ######

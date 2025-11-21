@@ -99,6 +99,7 @@ def build_festim_model(
     breeder_temperature,
     delta,
     results_folder,
+    insulated=True,
 ):
 
     # READ OPENFOAM MESH
@@ -140,8 +141,8 @@ def build_festim_model(
     )  # u is a fem.function.Function! paraview visualization of u_openfoam is accurate with this formulation
     festim_velocity = fem.Function(V_festim)
 
-    # my_writer = VTXWriter(MPI.COMM_WORLD, "openfoam_velocity.bp", u_openfoam, "BP5")
-    # my_writer.write(t=0)
+    my_writer = VTXWriter(MPI.COMM_WORLD, "openfoam_velocity.bp", u_openfoam, "BP5")
+    my_writer.write(t=0)
 
     festim_cells = festim_mesh_data.cell_tags.find(2)  # breeder cells to interpolate to
 
@@ -153,8 +154,8 @@ def build_festim_model(
         u_openfoam, cells=festim_cells, interpolation_data=interpolation_data
     )
 
-    # my_writer = VTXWriter(MPI.COMM_WORLD, "velocity_field.bp", festim_velocity, "BP5")
-    # my_writer.write(t=0)
+    my_writer = VTXWriter(MPI.COMM_WORLD, "velocity_field.bp", festim_velocity, "BP5")
+    my_writer.write(t=0)
 
     D_0_PbLi = 4.03e-08  # m2/s
     E_D_PbLi = 0.2021  # eV
@@ -170,8 +171,8 @@ def build_festim_model(
     D_pbli = fem.Function(V)
     D_pbli.interpolate(fem.Expression(D_expr, V.element.interpolation_points))
 
-    # my_writer_2 = VTXWriter(MPI.COMM_WORLD, "D_field.bp", D_pbli, "BP5")
-    # my_writer_2.write(t=0)
+    my_writer_2 = VTXWriter(MPI.COMM_WORLD, "D_field.bp", D_pbli, "BP5")
+    my_writer_2.write(t=0)
 
     breeder_material = F.Material(
         D=D_pbli, K_S_0=1.43e23, E_K_S=0.13
@@ -254,10 +255,28 @@ def build_festim_model(
 
     print(f"Inlet Concentration is {c_in} #/m3.")
 
+    alpha_Fe_recombination = htm.recombination_coeffs.filter(material=htm.IRON)[0]
+
+    surface_reaction_h2 = F.SurfaceReactionBC(
+        reactant=[H, H],
+        gas_pressure=0,  # assume 0 because vacuum
+        k_r0=alpha_Fe_recombination.pre_exp.magnitude,
+        E_kr=alpha_Fe_recombination.act_energy.magnitude,
+        k_d0=0,  # assume 0 because vacuum
+        E_kd=0,
+        subdomain=vacuum,
+    )
+
     my_model.boundary_conditions = [
         F.FixedConcentrationBC(subdomain=inlet, value=c_in, species=H),
         F.FixedConcentrationBC(subdomain=vacuum, value=0, species=H),
+        # surface_reaction_h2,
     ]
+
+    if not insulated:
+        my_model.boundary_conditions.append(
+            F.FixedConcentrationBC(subdomain=wall, value=0, species=H)
+        )
 
     # SETTINGS
 
@@ -299,11 +318,12 @@ def build_festim_model(
 if __name__ == "__main__":
 
     my_model = build_festim_model(
-        openfoam_data_file="OpenFOAM/laminar-case/probe.foam",
-        openfoam_final_time=300,
+        openfoam_data_file="OpenFOAM/kOmega-case/case.foam",
+        openfoam_final_time=208,
         breeder_temperature=603.15,
         delta=0.1,
         results_folder="festim_results",
+        insulated=True,
     )
 
     # INITIALISE AND RUN

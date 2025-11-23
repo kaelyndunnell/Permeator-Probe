@@ -91,7 +91,7 @@ for rate in flow_rates:
             new_value=values[1],
         )
 
-    shutil.copy("meshing/openfoam_mesh.msh", openfoam_folder_kOmega)
+    shutil.copy("meshing/openfoam_mesh.msh", openfoam_folder_kEpsilon)
 
     # kOmega case
     shutil.copytree(

@@ -14,14 +14,6 @@ FoamFile {
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-/* simulationType laminar; */
-simulationType RAS;
-
-RAS
-{
-    model           kEpsilon;
-
-    turbulence      on;
-}
+simulationType laminar;
 
 // ************************************************************************* //

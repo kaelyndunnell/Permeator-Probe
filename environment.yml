@@ -11,7 +11,7 @@ dependencies:
   - ipykernel
   - nbconvert
   - fenics-dolfinx
-  - festim=2.0b0
+  - festim=2.0b1
   - python-gmsh
   - pip:
     - pyparsing

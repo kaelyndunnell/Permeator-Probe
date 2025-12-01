@@ -20,7 +20,7 @@ gmsh.option.setString(
 
 gmsh.model.add("candido_probe")
 
-cad_file_path = "meshing/breeder.step"
+cad_file_path = "meshing/breeder_probe_in.step"
 gmsh.model.occ.importShapes(cad_file_path)
 
 gmsh.model.occ.synchronize()
@@ -119,7 +119,7 @@ gmsh.model.mesh.generate(3)  # 3D mesh
 
 gmsh.fltk.run()  # comment out if want to run without GUI
 
-gmsh.write("meshing/openfoam_mesh.msh")
+gmsh.write("meshing/probe_in_openfoam_mesh.msh")
 gmsh.finalize()
 
 ########################################
@@ -128,7 +128,7 @@ gmsh.finalize()
 
 # read mesh, volume tags, and surface tags
 mesh, volume_tags, surface_tags = gmshio.read_from_msh(
-    "meshing/openfoam_mesh.msh", MPI.COMM_WORLD, 0, gdim=3
+    "meshing/probe_in_openfoam_mesh.msh", MPI.COMM_WORLD, 0, gdim=3
 )
 
 print(f"Volume tags: {np.unique(volume_tags.values)}")

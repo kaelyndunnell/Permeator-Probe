@@ -12,7 +12,7 @@ gmsh.option.setString(
 )  # make sure gmsh reads .step file in meters
 gmsh.model.add("festim_mesh")
 
-cad_file_path = "meshing/two_volumes.step"
+cad_file_path = "meshing/probe_in_two_volumes.step"
 
 entities = gmsh.model.occ.importShapes(cad_file_path)
 gmsh.model.occ.synchronize()
@@ -110,6 +110,6 @@ gmsh.model.occ.synchronize()
 gmsh.model.mesh.generate(3)
 
 ##### SAVE MESH #####
-output_file = "meshing/festim_mesh.msh"
+output_file = "meshing/probe_in_festim_mesh.msh"
 gmsh.write(output_file)
 gmsh.finalize()

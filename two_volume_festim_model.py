@@ -98,6 +98,7 @@ def build_festim_model(
     breeder_temperature,
     delta,
     c_in,
+    Sc,
     results_folder,
     insulated=True,
     visualize_fields=False,
@@ -112,7 +113,7 @@ def build_festim_model(
     # READ GMSH MESH
     model_rank = 0
     festim_mesh_data = gmshio.read_from_msh(
-        "meshing/festim_mesh.msh", MPI.COMM_WORLD, model_rank, gdim=3
+        "meshing/probe_in_festim_mesh.msh", MPI.COMM_WORLD, model_rank, gdim=3
     )
     festim_mesh = festim_mesh_data.mesh
 
@@ -142,9 +143,6 @@ def build_festim_model(
     )  # u is a fem.function.Function! paraview visualization of u_openfoam is accurate with this formulation
     festim_velocity = fem.Function(V_festim)
 
-    my_writer = VTXWriter(MPI.COMM_WORLD, "openfoam_velocity.bp", u_openfoam, "BP5")
-    my_writer.write(t=0)
-
     festim_cells = festim_mesh_data.cell_tags.find(2)  # breeder cells to interpolate to
 
     interpolation_data = fem.create_interpolation_data(
@@ -155,6 +153,26 @@ def build_festim_model(
         u_openfoam, cells=festim_cells, interpolation_data=interpolation_data
     )
 
+    # interpolate OpenFOAM nut field onto FESTIM mesh
+    N_openfoam = fem.functionspace(openfoam_mesh, ("CG", 1))
+    N_festim = fem.functionspace(festim_mesh, ("CG", 1))
+
+    nut_openfoam = fem.Function(N_openfoam)
+    nut_openfoam.interpolate(nut)
+    festim_nut = fem.Function(N_festim)
+
+    interpolation_data = fem.create_interpolation_data(
+        V_to=N_festim, V_from=N_openfoam, cells=festim_cells
+    )
+
+    festim_nut.interpolate_nonmatching(
+        nut_openfoam, cells=festim_cells, interpolation_data=interpolation_data
+    )
+
+    nut_field_array = festim_nut.x.array
+    nut_field_array[nut_field_array < 0.0] = 0.0  # ensure no negative eddy viscosity
+    festim_nut.x.array[:] = nut_field_array
+
     D_0_PbLi = 4.03e-08  # m2/s
     E_D_PbLi = 0.2021  # eV
 
@@ -164,18 +182,35 @@ def build_festim_model(
     D_art = evaluate_stabalisation_term(
         mesh=festim_mesh, u=festim_velocity, delta=delta
     )
-    D_expr = D_diff + D_art
+
+    # add turbulent diffusion term
+    D_turb = festim_nut / Sc
+
+    D_expr = D_diff + D_turb
     V = fem.functionspace(festim_mesh, ("CG", 1))
     D_pbli = fem.Function(V)
     D_pbli.interpolate(fem.Expression(D_expr, V.element.interpolation_points))
 
     if visualize_fields:
-        my_writer = VTXWriter(
-            MPI.COMM_WORLD, "velocity_field.bp", festim_velocity, "BP5"
+        my_writer_v_festim = VTXWriter(
+            MPI.COMM_WORLD,
+            results_folder + "/velocity_field.bp",
+            festim_velocity,
+            "BP5",
         )
-        my_writer.write(t=0)
-        my_writer_2 = VTXWriter(MPI.COMM_WORLD, "D_field.bp", D_pbli, "BP5")
-        my_writer_2.write(t=0)
+        my_writer_v_festim.write(t=0)
+        my_writer_D_field = VTXWriter(
+            MPI.COMM_WORLD, results_folder + "/D_field.bp", D_pbli, "BP5"
+        )
+        my_writer_D_field.write(t=0)
+        my_writer_nut = VTXWriter(
+            MPI.COMM_WORLD, results_folder + "/festim_nut.bp", festim_nut, "BP5"
+        )
+        my_writer_nut.write(t=0)
+        my_writer_v_openfoam = VTXWriter(
+            MPI.COMM_WORLD, results_folder + "/openfoam_velocity.bp", u_openfoam, "BP5"
+        )
+        my_writer_v_openfoam.write(t=0)
 
     breeder_material = F.Material(
         D=D_pbli, K_S_0=1.43e23, E_K_S=0.13
@@ -265,8 +300,7 @@ def build_festim_model(
 
     my_model.boundary_conditions = [
         F.FixedConcentrationBC(subdomain=inlet, value=c_in, species=H),
-        F.FixedConcentrationBC(subdomain=vacuum, value=0, species=H),
-        # vacuum_surface_reaction_h2,
+        vacuum_surface_reaction_h2,
     ]
 
     if not insulated:
@@ -279,10 +313,7 @@ def build_festim_model(
             E_kd=0,
             subdomain=wall,
         )
-        # my_model.boundary_conditions.append(wall_surface_reaction_h2)
-        my_model.boundary_conditions.append(
-            F.FixedConcentrationBC(subdomain=wall, value=0, species=H)
-        )
+        my_model.boundary_conditions.append(wall_surface_reaction_h2)
 
     # SETTINGS
 
@@ -300,6 +331,12 @@ def build_festim_model(
         filename=f"{results_folder}/outlet_advective_flux.csv",
         velocity_field=festim_velocity,
     )
+    inlet_advective_flux = SurfaceAdvectionFlux(
+        field=H,
+        surface=inlet,
+        filename=f"{results_folder}/inlet_advective_flux.csv",
+        velocity_field=festim_velocity,
+    )
     permeation_flux = F.SurfaceFlux(
         field=H, surface=vacuum, filename=f"{results_folder}/permeation_flux.csv"
     )
@@ -313,6 +350,7 @@ def build_festim_model(
 
     my_model.exports = [
         outlet_advective_flux,
+        inlet_advective_flux,
         permeation_flux,
         concentration_field_breeder,
         concentration_field_probe,
@@ -331,14 +369,15 @@ if __name__ == "__main__":
     print(f"Inlet Concentration is {c_in} #/m3.")
 
     my_model = build_festim_model(
-        openfoam_data_file="OpenFOAM/kOmega-case/case.foam",
+        openfoam_data_file="OpenFOAM/benchmark_cases_LiPb/kOmega-case/case.foam",
         openfoam_final_time=208,
         breeder_temperature=603.15,
-        delta=0.1,
+        delta=0.01,
         c_in=c_in,
-        results_folder="festim_results",
+        Sc=0.7,  # seems to be default in OpenFOAM, find a reference to back up
+        results_folder="festim_results_probe_in_benchmark",
         insulated=True,
-        visualize_fields=True,
+        visualize_fields=False,
     )
 
     # INITIALISE AND RUN

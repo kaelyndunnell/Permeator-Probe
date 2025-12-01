@@ -32,14 +32,19 @@ parser.add_argument("--case", type=str, help="Number of OpenFOAM case being run.
 parser.add_argument(
     "--turbulence", type=str, help="Turbulence type, kEpsilon or kOmega."
 )
+parser.add_argument(
+    "--geometry", type=str, help="Model Geometry, probe_in or probe_out."
+)
 
 args = parser.parse_args()
 
 case_number = args.case
 model = args.turbulence
+geometry = args.geometry
 
 replace_specific_variables(
-    filename="probe_case_"
+    filename=geometry
+    + "/probe_case_"
     + str(case_number)
     + "_"
     + str(model)

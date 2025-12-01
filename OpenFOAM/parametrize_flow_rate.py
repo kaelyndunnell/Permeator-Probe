@@ -57,24 +57,25 @@ for rate in flow_rates:
     omega = calculate_initial_omega(k, inlet_diameter)
 
     openfoam_folder_kEpsilon = (
-        f"OpenFOAM/flow_rate_parametrization/probe_case_{rate}_kEpsilon"
+        f"OpenFOAM/flow_rate_parametrization/probe_out/probe_case_{rate}_kEpsilon"
     )
     openfoam_folder_kOmega = (
-        f"OpenFOAM/flow_rate_parametrization/probe_case_{rate}_kOmega"
+        f"OpenFOAM/flow_rate_parametrization/probe_out/probe_case_{rate}_kOmega"
     )
-    # os.makedirs(openfoam_folder_kEpsilon, exist_ok=True)
+    os.makedirs(openfoam_folder_kEpsilon, exist_ok=True)
     os.makedirs(openfoam_folder_kOmega, exist_ok=True)
 
     # kEpsilon case
     shutil.copytree(
-        "OpenFOAM/k-epsilon-turbulent-case/0/", openfoam_folder_kEpsilon + "/0"
+        "OpenFOAM/benchmark_cases_LiPb/probe_out_k_epsilon/0/",
+        openfoam_folder_kEpsilon + "/0",
     )  # p, nut files are the same as benchmark kOmega case
     shutil.copytree(
-        "OpenFOAM/k-epsilon-turbulent-case/system/",
+        "OpenFOAM/benchmark_cases_LiPb/probe_out_k_epsilon/system/",
         openfoam_folder_kEpsilon + "/system",
     )
     shutil.copytree(
-        "OpenFOAM/k-epsilon-turbulent-case/constant/",
+        "OpenFOAM/benchmark_cases_LiPb/probe_out_k_epsilon/constant/",
         openfoam_folder_kEpsilon + "/constant",
     )
 
@@ -91,18 +92,19 @@ for rate in flow_rates:
             new_value=values[1],
         )
 
-    shutil.copy("meshing/probe_in_openfoam_mesh.msh", openfoam_folder_kEpsilon)
+    shutil.copy("meshing/probe_out_openfoam.msh", openfoam_folder_kEpsilon)
 
     # kOmega case
     shutil.copytree(
-        "OpenFOAM/benchmark_cases_LiPb/kOmega-case/0/", openfoam_folder_kOmega + "/0"
+        "OpenFOAM/benchmark_cases_LiPb/probe_out_kOmegaSST/0/",
+        openfoam_folder_kOmega + "/0",
     )  # p, nut files are the same as benchmark kOmega case
     shutil.copytree(
-        "OpenFOAM/benchmark_cases_LiPb/kOmega-case/system/",
+        "OpenFOAM/benchmark_cases_LiPb/probe_out_kOmegaSST/system/",
         openfoam_folder_kOmega + "/system",
     )
     shutil.copytree(
-        "OpenFOAM/benchmark_cases_LiPb/kOmega-case/constant/",
+        "OpenFOAM/benchmark_cases_LiPb/probe_out_kOmegaSST/constant/",
         openfoam_folder_kOmega + "/constant",
     )
 
@@ -119,4 +121,4 @@ for rate in flow_rates:
             new_value=values[1],
         )
 
-    shutil.copy("meshing/openfoam_mesh.msh", openfoam_folder_kOmega)
+    shutil.copy("meshing/probe_out_openfoam.msh", openfoam_folder_kOmega)

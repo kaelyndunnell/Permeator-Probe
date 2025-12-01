@@ -81,6 +81,39 @@ def calculate_reynolds_number(
     return reynolds_number
 
 
+def calculate_schmidt_number(
+    kinematic_viscosity,
+    diffusivity,
+    breeder,
+    suppress_print=False,
+):
+    """Calculate the schmidt number of a fluid breeder given its kinematic viscosity and mass diffusivity.
+    Used for turbulent diffusion term in FESTIM.
+
+    Parameters
+    ----------
+    kinematic_viscosity : float
+        Kinematic viscosity in m2/s.
+    diffusivity : float
+        Fluid diffusivity in m2/s.
+    breeder : str
+        Breeder fluid name.
+
+    Returns
+    -------
+    float
+        Schmidt number (dimensionless).
+    """
+
+    schmidt_number = kinematic_viscosity / diffusivity
+
+    if not suppress_print:
+
+        print(f"Schmidt number for {breeder} is {schmidt_number}.")
+
+    return schmidt_number
+
+
 def plot_reynolds_number_vs_inlet_velocity(
     characteristic_length,
     kinematic_viscosity,
@@ -102,7 +135,7 @@ def plot_reynolds_number_vs_inlet_velocity(
      breeder : str
         Breeder fluid name.
     """
-    inlet_velocities = np.linspace(0, 1e-2, 10000)  # m/s
+    inlet_velocities = np.linspace(0, 1e-1, 10000)  # m/s
     Re_numbers = []
 
     for inlet_velocity in inlet_velocities:  # m/s

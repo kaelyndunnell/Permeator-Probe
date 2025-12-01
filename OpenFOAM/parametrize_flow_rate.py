@@ -39,7 +39,7 @@ kinematic_viscosity = calculate_LiPb_kinematic_viscosity(
 )
 
 # FLOW RATE PARAMETRIZATION
-flow_rates = [1, 2, 3, 4]  # kg/s ; from Utili 2023
+flow_rates = [2, 3, 4]  # kg/s
 
 for rate in flow_rates:
     inlet_velocity = calculate_inlet_velocity(
@@ -62,7 +62,7 @@ for rate in flow_rates:
     openfoam_folder_kOmega = (
         f"OpenFOAM/flow_rate_parametrization/probe_case_{rate}_kOmega"
     )
-    os.makedirs(openfoam_folder_kEpsilon, exist_ok=True)
+    # os.makedirs(openfoam_folder_kEpsilon, exist_ok=True)
     os.makedirs(openfoam_folder_kOmega, exist_ok=True)
 
     # kEpsilon case
@@ -91,15 +91,19 @@ for rate in flow_rates:
             new_value=values[1],
         )
 
-    shutil.copy("meshing/openfoam_mesh.msh", openfoam_folder_kEpsilon)
+    shutil.copy("meshing/probe_in_openfoam_mesh.msh", openfoam_folder_kEpsilon)
 
     # kOmega case
     shutil.copytree(
-        "OpenFOAM/kOmega-case/0/", openfoam_folder_kOmega + "/0"
+        "OpenFOAM/benchmark_cases_LiPb/kOmega-case/0/", openfoam_folder_kOmega + "/0"
     )  # p, nut files are the same as benchmark kOmega case
-    shutil.copytree("OpenFOAM/kOmega-case/system/", openfoam_folder_kOmega + "/system")
     shutil.copytree(
-        "OpenFOAM/kOmega-case/constant/", openfoam_folder_kOmega + "/constant"
+        "OpenFOAM/benchmark_cases_LiPb/kOmega-case/system/",
+        openfoam_folder_kOmega + "/system",
+    )
+    shutil.copytree(
+        "OpenFOAM/benchmark_cases_LiPb/kOmega-case/constant/",
+        openfoam_folder_kOmega + "/constant",
     )
 
     variables_dict = {

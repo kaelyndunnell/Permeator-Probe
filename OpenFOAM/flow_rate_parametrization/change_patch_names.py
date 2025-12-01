@@ -18,6 +18,8 @@ def replace_specific_variables(filename, targets):
             inside = None
         if inside and "type" in stripped and "patch" in stripped:
             line = line.replace("patch", "wall")
+        if inside and "physicalType" in stripped and "patch" in stripped:
+            line = line.replace("patch", "wall")
         out.append(line)
 
     with open(filename, "w", encoding="utf-8") as f:

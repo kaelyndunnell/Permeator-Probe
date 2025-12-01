@@ -22,14 +22,15 @@ for conc in mol_m3_c_in:
     print(f"Running simulation for inlet concentration of {c_in} #/m3.")
 
     my_model = build_festim_model(
-        openfoam_data_file="OpenFOAM/kOmega-case/case.foam",
+        openfoam_data_file="OpenFOAM/benchmark_cases_LiPb/kOmega-case/case.foam",
         openfoam_final_time=208,
         breeder_temperature=603.15,
         delta=0.1,
         c_in=c_in,
+        Sc=0.7,
         results_folder=f"festim_results_cin_{conc}_mol_m3",
         insulated=True,
-        visualize_fields=True,
+        visualize_fields=False,
     )
 
     # INITIALISE AND RUN

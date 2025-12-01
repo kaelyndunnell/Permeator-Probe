@@ -20,7 +20,7 @@ for i in $(seq 2 4); do # flow rates, same as in parametrization model
     cd ..
     cd .. 
     cd probe_out/probe_case_${i}_kOmegaSST
-    gmshToFoam probe_out_openfoam_mesh.msh
+    gmshToFoam probe_out_openfoam.msh
     checkMesh
 
     cd ..
@@ -33,6 +33,6 @@ for i in $(seq 2 4); do # flow rates, same as in parametrization model
     potentialFoam -writep -writePhi
     simpleFoam 
 
-    echo "Running Probe Case $i kOmega"
+    echo "Ran Probe Case $i kOmegaSST."
 
 done

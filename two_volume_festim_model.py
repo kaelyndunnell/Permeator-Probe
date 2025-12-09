@@ -274,6 +274,7 @@ def build_festim_model(
     H = F.Species("H", subdomains=my_model.volume_subdomains)
     my_model.species = [H]
 
+    my_model.method_interface = F.InterfaceMethod.nitsche
     my_model.interfaces = [
         F.Interface(
             id=interface_marker,

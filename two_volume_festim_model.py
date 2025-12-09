@@ -95,6 +95,7 @@ def evaluate_stabalisation_term(mesh, u, delta):
 def build_festim_model(
     openfoam_data_file,
     openfoam_final_time,
+    festim_mesh_file,
     breeder_temperature,
     delta,
     c_in,
@@ -113,7 +114,7 @@ def build_festim_model(
     # READ GMSH MESH
     model_rank = 0
     festim_mesh_data = gmshio.read_from_msh(
-        "meshing/probe_in_festim_mesh.msh", MPI.COMM_WORLD, model_rank, gdim=3
+        festim_mesh_file, MPI.COMM_WORLD, model_rank, gdim=3
     )
     festim_mesh = festim_mesh_data.mesh
 
@@ -173,7 +174,7 @@ def build_festim_model(
     nut_field_array[nut_field_array < 0.0] = 0.0  # ensure no negative eddy viscosity
     festim_nut.x.array[:] = nut_field_array
 
-    D_0_PbLi = 4.03e-08  # m2/s
+    D_0_PbLi = 4.03e-08  # m2/s, https://theses.hal.science/tel-04906459v1
     E_D_PbLi = 0.2021  # eV
 
     D_diff = D_0_PbLi * ufl.exp(-E_D_PbLi / (F.k_B * breeder_temperature))
@@ -212,9 +213,11 @@ def build_festim_model(
         )
         my_writer_v_openfoam.write(t=0)
 
+    lipb = htm.solubilities.filter(material=htm.LIPB).mean()
+
     breeder_material = F.Material(
-        D=D_pbli, K_S_0=1.43e23, E_K_S=0.13
-    )  # https://theses.hal.science/tel-04906459v1
+        D=D_pbli, K_S_0=lipb.pre_exp.magnitude, E_K_S=lipb.act_energy.magnitude
+    )
 
     u = htm.ureg
     solubility_alpha_iron = htm.Solubility(
@@ -275,7 +278,7 @@ def build_festim_model(
         F.Interface(
             id=interface_marker,
             subdomains=[breeder, probe],
-            penalty_term=1e25,
+            penalty_term=1e26,
         ),
     ]
 
@@ -300,7 +303,8 @@ def build_festim_model(
 
     my_model.boundary_conditions = [
         F.FixedConcentrationBC(subdomain=inlet, value=c_in, species=H),
-        vacuum_surface_reaction_h2,
+        F.FixedConcentrationBC(subdomain=vacuum, value=0, species=H),
+        # vacuum_surface_reaction_h2,
     ]
 
     if not insulated:
@@ -318,7 +322,7 @@ def build_festim_model(
     # SETTINGS
 
     my_model.settings = F.Settings(
-        atol=1e-10,
+        atol=1e10,
         rtol=1e-10,
         transient=False,
     )
@@ -369,15 +373,16 @@ if __name__ == "__main__":
     print(f"Inlet Concentration is {c_in} #/m3.")
 
     my_model = build_festim_model(
-        openfoam_data_file="OpenFOAM/benchmark_cases_LiPb/kOmega-case/case.foam",
-        openfoam_final_time=208,
+        openfoam_data_file="OpenFOAM/benchmark_cases_LiPb/probe_out_kOmegaSST/case.foam",
+        openfoam_final_time=2457,
+        festim_mesh_file="meshing/probe_out_festim_mesh.msh",
         breeder_temperature=603.15,
         delta=0.01,
         c_in=c_in,
         Sc=0.7,  # seems to be default in OpenFOAM, find a reference to back up
-        results_folder="festim_results_probe_in_benchmark",
+        results_folder="festim_results_probe_out_benchmark",
         insulated=True,
-        visualize_fields=False,
+        visualize_fields=True,
     )
 
     # INITIALISE AND RUN

@@ -4,6 +4,7 @@ channels:
   - defaults
 dependencies:
 # TODO: add OpenFoam dependencies
+  - python=3.13
   - sphinx-tags
   - matplotlib
   - meshio[all]

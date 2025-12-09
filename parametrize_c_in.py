@@ -3,8 +3,8 @@ from two_volume_festim_model import build_festim_model
 N_A = 6.022e23
 
 mol_m3_c_in = [
-    5e-9,
-    5e-8,
+    # 5e-9,
+    # 5e-8,
     5e-7,
     5e-6,
     5e-5,
@@ -24,6 +24,7 @@ for conc in mol_m3_c_in:
     my_model = build_festim_model(
         openfoam_data_file="OpenFOAM/benchmark_cases_LiPb/kOmega-case/case.foam",
         openfoam_final_time=208,
+        festim_mesh_file="meshing/probe_in_festim_mesh.msh",
         breeder_temperature=603.15,
         delta=0.1,
         c_in=c_in,

@@ -84,10 +84,10 @@ gmsh.model.mesh.field.setNumbers(distance_field, "FacesList", inlet_outlet_walls
 threshold_field = gmsh.model.mesh.field.add("Threshold")
 gmsh.model.mesh.field.setNumber(threshold_field, "IField", distance_field)
 gmsh.model.mesh.field.setNumber(
-    threshold_field, "SizeMin", 0.01
+    threshold_field, "SizeMin", 0.003
 )  # smallest mesh size near surfaces
 gmsh.model.mesh.field.setNumber(
-    threshold_field, "SizeMax", 0.1
+    threshold_field, "SizeMax", 0.05
 )  # mesh size far from surfaces
 gmsh.model.mesh.field.setNumber(
     threshold_field, "DistMin", 0.05

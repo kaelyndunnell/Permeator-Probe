@@ -300,7 +300,7 @@ def build_festim_model(
         F.Interface(
             id=interface_marker,
             subdomains=[breeder, probe],
-            penalty_term=1e26,
+            penalty_term=1e30,
         ),
     ]
 
@@ -316,7 +316,7 @@ def build_festim_model(
     vacuum_surface_reaction_h2 = F.SurfaceReactionBC(
         reactant=[H, H],
         gas_pressure=0,  # assume 0 because vacuum
-        k_r0=alpha_Fe_recombination.pre_exp.magnitude,  # * 1e25,
+        k_r0=alpha_Fe_recombination.pre_exp.magnitude,
         E_kr=alpha_Fe_recombination.act_energy.magnitude,
         k_d0=0,  # assume 0 because vacuum
         E_kd=0,
@@ -344,7 +344,7 @@ def build_festim_model(
     # SETTINGS
 
     my_model.settings = F.Settings(
-        atol=1e10,  # 1e10 for probe in
+        atol=1e10,
         rtol=1e-10,
         transient=False,
     )
@@ -399,7 +399,7 @@ if __name__ == "__main__":
         openfoam_final_time=208,
         festim_mesh_file="meshing/probe_in_festim_mesh.msh",
         breeder_temperature=603.15,
-        delta=1,
+        delta=10,
         c_in=c_in,
         Sc=0.7,  # seems to be default in OpenFOAM, find a reference to back up
         results_folder="festim_results_probe_in_benchmark",

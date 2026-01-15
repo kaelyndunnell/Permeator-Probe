@@ -396,7 +396,7 @@ if __name__ == "__main__":
         openfoam_final_time=2457,
         festim_mesh_file="meshing/probe_out_festim_mesh.msh",
         breeder_temperature=603.15,
-        delta=0.5,
+        delta=1,
         c_in=c_in,
         Sc=0.7,  # seems to be default in OpenFOAM, find a reference to back up
         results_folder="festim_results_probe_out_benchmark",

@@ -1,7 +1,5 @@
 from ufl import exp, dot, sqrt
 from dolfinx.fem import Function, functionspace, Expression
-from foam2dolfinx import OpenFOAMReader
-from dolfinx.io import gmshio
 import dolfinx
 import festim as F
 import numpy as np
@@ -10,7 +8,11 @@ from openfoam_to_festim import read_openfoam_data
 from dolfinx import cpp as _cpp
 from mpi4py import MPI
 
-p, u, mesh, nut = read_openfoam_data("OpenFOAM/laminar-case/case.foam", final_time=8.0)
+# script from James Dark, needs adapting
+
+p, u, mesh, nut, facet_meshtags, volume_meshtags = read_openfoam_data(
+    "OpenFOAM/benchmark_cases_LiPb/laminar-case/probe.foam", final_time=300
+)
 
 T = 603.15  # K
 

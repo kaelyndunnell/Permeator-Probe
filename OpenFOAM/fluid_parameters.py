@@ -135,7 +135,7 @@ def plot_reynolds_number_vs_inlet_velocity(
      breeder : str
         Breeder fluid name.
     """
-    inlet_velocities = np.linspace(0, 1e-1, 10000)  # m/s
+    inlet_velocities = np.linspace(0, 1e-2, 100000)  # m/s
     Re_numbers = []
 
     for inlet_velocity in inlet_velocities:  # m/s

@@ -54,6 +54,7 @@ FLiBe_density = 2245 - 0.424 * (
     breeder_temperature - 273.15
 )  # kg/m3 ; equation from Vidrio 2022
 
+# flow_rate = 3  # kg/s --> just barely hitting turbulent flows here
 flow_rate = 50 / 1000 * FLiBe_density / 1000 / 60  # kg/s, given as 50 ml/min from KF
 
 inlet_diameter = 0.13  # m from CAD
@@ -85,5 +86,5 @@ print(f"Initial turbulence kinetic energy for {breeder}: {k} m2/s2")
 print(f"Initial turbulence dissipation rate for {breeder}: {epsilon} m2/s3")
 
 plot_reynolds_number_vs_inlet_velocity(
-    inlet_diameter, kinematic_viscosity, breeder_temperature, breeder
+    inlet_diameter, kinematic_viscosity, breeder_temperature, breeder, inlet_velocity
 )

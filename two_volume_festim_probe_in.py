@@ -402,7 +402,7 @@ if __name__ == "__main__":
         delta=10,
         c_in=c_in,
         Sc=0.7,  # seems to be default in OpenFOAM, find a reference to back up
-        results_folder="festim_results_probe_in_benchmark",
+        results_folder="surfaceRecomboBC/festim_results_probe_in_benchmark",
         insulated=True,
         visualize_fields=True,
     )

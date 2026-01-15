@@ -50,7 +50,7 @@ for flow_rate, (openfoam_data_file, final_time) in openfoam_data_files.items():
     #     delta=10,
     #     c_in=c_in,
     #     Sc=0.7,  # seems to be default in OpenFOAM, 10.1007/s10652-005-5656-9
-    #     results_folder=f"OpenFOAM_abacus_probe_in/festim_results_flow_{flow_rate}_kg_s",
+    #     results_folder=f"surfaceRecomboBC/OpenFOAM_abacus_probe_in/festim_results_flow_{flow_rate}_kg_s",
     #     insulated=True,
     #     visualize_fields=True,
     # )
@@ -64,7 +64,7 @@ for flow_rate, (openfoam_data_file, final_time) in openfoam_data_files.items():
         delta=0.1,
         c_in=c_in,
         Sc=0.7,
-        results_folder=f"OpenFOAM_abacus_probe_out/festim_results_flow_{flow_rate}_kg_s",
+        results_folder=f"surfaceRecomboBC/OpenFOAM_abacus_probe_out/festim_results_flow_{flow_rate}_kg_s",
         insulated=True,
         visualize_fields=True,
     )

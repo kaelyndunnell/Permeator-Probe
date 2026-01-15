@@ -24,6 +24,9 @@ Then, activate the environment:
 conda activate permeator-probe-env
 ```
 
+> **_NOTE:_**  The `environment.yml` file does not include OpenFOAM installation, which will need to be done independently. Refer to [OpenFOAMv13 installation instructions](https://openfoam.org/download/) for your operating system. 
+
+
 ## Workflow: 
 
 To run the probe-in OpenFOAM simulation, first create the mesh: 

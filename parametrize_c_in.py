@@ -31,7 +31,7 @@ for conc in mol_m3_c_in:
     #     delta=10,
     #     c_in=c_in,
     #     Sc=0.7,
-    #     results_folder=f"festim_abacus_probe_in/festim_results_cin_{conc}_mol_m3",
+    #     results_folder=f"surfaceRecomboBC/festim_abacus_probe_in/festim_results_cin_{conc}_mol_m3",
     #     insulated=True,
     #     visualize_fields=False,
     # )
@@ -45,7 +45,7 @@ for conc in mol_m3_c_in:
         delta=0.1,
         c_in=c_in,
         Sc=0.7,  # seems to be default in OpenFOAM, find a reference to back up
-        results_folder=f"festim_abacus_probe_out/festim_results_cin_{conc}_mol_m3",
+        results_folder=f"surfaceRecomboBC/festim_abacus_probe_out/festim_results_cin_{conc}_mol_m3",
         insulated=True,
         visualize_fields=False,
     )

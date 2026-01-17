@@ -99,7 +99,6 @@ def build_festim_model(
     breeder_temperature,
     delta,
     c_in,
-    Sc,
     results_folder,
     visualize_fields=False,
 ):
@@ -153,26 +152,6 @@ def build_festim_model(
         u_openfoam, cells=festim_cells, interpolation_data=interpolation_data
     )
 
-    # interpolate OpenFOAM nut field onto FESTIM mesh
-    N_openfoam = fem.functionspace(openfoam_mesh, ("CG", 1))
-    N_festim = fem.functionspace(festim_mesh, ("CG", 1))
-
-    nut_openfoam = fem.Function(N_openfoam)
-    nut_openfoam.interpolate(nut)
-    festim_nut = fem.Function(N_festim)
-
-    interpolation_data = fem.create_interpolation_data(
-        V_to=N_festim, V_from=N_openfoam, cells=festim_cells
-    )
-
-    festim_nut.interpolate_nonmatching(
-        nut_openfoam, cells=festim_cells, interpolation_data=interpolation_data
-    )
-
-    nut_field_array = festim_nut.x.array
-    nut_field_array[nut_field_array < 0.0] = 0.0  # ensure no negative eddy viscosity
-    festim_nut.x.array[:] = nut_field_array
-
     flibe_diffusivity = (
         htm.diffusivities.filter(material=htm.FLIBE)
         .filter(exclude=True, isotope="H")
@@ -181,22 +160,19 @@ def build_festim_model(
     )
 
     D_0_PbLi = flibe_diffusivity.pre_exp.magnitude  # m2/s,
-    E_D_PbLi = flibe_diffusivity.act_energy.magnitude  # eV
+    E_D_flibe = flibe_diffusivity.act_energy.magnitude  # eV
 
-    D_diff = D_0_PbLi * ufl.exp(-E_D_PbLi / (F.k_B * breeder_temperature))
+    D_diff = D_0_PbLi * ufl.exp(-E_D_flibe / (F.k_B * breeder_temperature))
 
     # add stabilization term for diffusion
     D_art = evaluate_stabalisation_term(
         mesh=festim_mesh, u=festim_velocity, delta=delta
     )
 
-    # add turbulent diffusion term
-    D_turb = festim_nut / Sc
-
-    D_expr = D_diff + D_turb + D_art
+    D_expr = D_diff + D_art
     V = fem.functionspace(festim_mesh, ("CG", 1))
-    D_pbli = fem.Function(V)
-    D_pbli.interpolate(fem.Expression(D_expr, V.element.interpolation_points))
+    D_flibe = fem.Function(V)
+    D_flibe.interpolate(fem.Expression(D_expr, V.element.interpolation_points))
 
     if visualize_fields:
         my_writer_v_festim = VTXWriter(
@@ -207,27 +183,23 @@ def build_festim_model(
         )
         my_writer_v_festim.write(t=0)
         my_writer_D_field = VTXWriter(
-            MPI.COMM_WORLD, results_folder + "/D_field.bp", D_pbli, "BP5"
+            MPI.COMM_WORLD, results_folder + "/D_field.bp", D_flibe, "BP5"
         )
         my_writer_D_field.write(t=0)
-        my_writer_nut = VTXWriter(
-            MPI.COMM_WORLD, results_folder + "/festim_nut.bp", festim_nut, "BP5"
-        )
-        my_writer_nut.write(t=0)
         my_writer_v_openfoam = VTXWriter(
             MPI.COMM_WORLD, results_folder + "/openfoam_velocity.bp", u_openfoam, "BP5"
         )
         my_writer_v_openfoam.write(t=0)
 
     flibe_solubility = (
-        htm.solubilities.filter(material=htm.LIPB)
+        htm.solubilities.filter(material=htm.FLIBE)
         .filter(exclude=True, isotope="H")
         .filter(exclude=True, isotope="D")
         .mean()
     )
 
     breeder_material = F.Material(
-        D=D_pbli,
+        D=D_flibe,
         K_S_0=flibe_solubility.pre_exp.magnitude,
         E_K_S=flibe_solubility.act_energy.magnitude,
     )
@@ -297,7 +269,7 @@ def build_festim_model(
         F.Interface(
             id=interface_marker,
             subdomains=[breeder, probe],
-            penalty_term=1e26,
+            penalty_term=1e25,
         ),
     ]
 
@@ -391,7 +363,6 @@ if __name__ == "__main__":
         breeder_temperature=900,
         delta=0.1,
         c_in=c_in,
-        Sc=0.7,  # seems to be default in OpenFOAM, find a reference to back up
         results_folder="flibe_festim_results_probe_in_benchmark",
         visualize_fields=True,
     )

@@ -2,7 +2,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def calculate_inlet_velocity(flow_rate, inlet_diameter, breeder_density, breeder):
+def calculate_inlet_velocity(
+    flow_rate,
+    inlet_diameter,
+    breeder_density,
+    breeder,
+    suppress_print=False,
+):
     """Calculate the inlet velocity of fluid breeder at a given flow rate, inlet diameter, breeder density, and temperature.
     Used for OpenFOAM simulation.
 
@@ -26,9 +32,10 @@ def calculate_inlet_velocity(flow_rate, inlet_diameter, breeder_density, breeder
     inlet_area = np.pi * (inlet_diameter / 2) ** 2  # m^2
 
     inlet_velocity = flow_rate * breeder_density ** (-1) * inlet_area ** (-1)  # m/s
-    print(
-        f"Inlet velocity for {breeder} flow rate of {flow_rate}kg/s is {inlet_velocity}m/s."
-    )
+    if not suppress_print:
+        print(
+            f"Inlet velocity for {breeder} flow rate of {flow_rate}kg/s is {inlet_velocity}m/s."
+        )
 
     return inlet_velocity
 
@@ -74,6 +81,39 @@ def calculate_reynolds_number(
     return reynolds_number
 
 
+def calculate_schmidt_number(
+    kinematic_viscosity,
+    diffusivity,
+    breeder,
+    suppress_print=False,
+):
+    """Calculate the schmidt number of a fluid breeder given its kinematic viscosity and mass diffusivity.
+    Used for turbulent diffusion term in FESTIM.
+
+    Parameters
+    ----------
+    kinematic_viscosity : float
+        Kinematic viscosity in m2/s.
+    diffusivity : float
+        Fluid diffusivity in m2/s.
+    breeder : str
+        Breeder fluid name.
+
+    Returns
+    -------
+    float
+        Schmidt number (dimensionless).
+    """
+
+    schmidt_number = kinematic_viscosity / diffusivity
+
+    if not suppress_print:
+
+        print(f"Schmidt number for {breeder} is {schmidt_number}.")
+
+    return schmidt_number
+
+
 def plot_reynolds_number_vs_inlet_velocity(
     characteristic_length,
     kinematic_viscosity,
@@ -95,7 +135,7 @@ def plot_reynolds_number_vs_inlet_velocity(
      breeder : str
         Breeder fluid name.
     """
-    inlet_velocities = np.linspace(0, 1e-2, 10000)  # m/s
+    inlet_velocities = np.linspace(0, 1e-2, 100000)  # m/s
     Re_numbers = []
 
     for inlet_velocity in inlet_velocities:  # m/s

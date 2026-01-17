@@ -24,9 +24,12 @@ Then, activate the environment:
 conda activate permeator-probe-env
 ```
 
+> **_NOTE:_**  The `environment.yml` file does not include OpenFOAM installation, which will need to be done independently. Refer to [OpenFOAMv13 installation instructions](https://openfoam.org/download/) for your operating system. 
+
+
 ## Workflow: 
 
-To run the OpenFOAM simulation, first create the mesh: 
+To run the probe-in OpenFOAM simulation, first create the mesh: 
 
  ```
  python meshing/cad_to_gmsh_for_openfoam.py
@@ -35,9 +38,9 @@ To run the OpenFOAM simulation, first create the mesh:
  Convert mesh to OpenFOAM format: 
 
  ```
- mv meshing/openfoam_mesh.msh OpenFOAM/laminar-case
+ mv meshing/probe_in_openfoam_mesh.msh OpenFOAM/laminar-case
  cd OpenFOAM/laminar-case
- gmshToFoam openfoam_mesh.msh
+ gmshToFoam probe_in_openfoam_mesh.msh
  ```
 
  > **_NOTE:_**  Ensure the bounding box of the mesh is in the proper units -- with our geometry, it should be `(-0.067 -0.1 -0.067) (0.067 0.1 0.067)`. If it isn't, use the `transformPoints` command accordingly.

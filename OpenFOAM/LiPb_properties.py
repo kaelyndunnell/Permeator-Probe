@@ -5,12 +5,18 @@ from fluid_parameters import (
     calculate_initial_k,
     calculate_initial_epsilon,
     calculate_initial_omega,
+    calculate_schmidt_number,
 )
 import numpy as np
 import festim as F
 
 
-def calculate_LiPb_kinematic_viscosity(breeder_temperature, breeder_density, breeder):
+def calculate_LiPb_kinematic_viscosity(
+    breeder_temperature,
+    breeder_density,
+    breeder,
+    suppress_print=False,
+):
     """Calculate the kinematic viscosity of LiPb at a given temperature and density.
     Used for OpenFOAM simulation.
 
@@ -37,9 +43,10 @@ def calculate_LiPb_kinematic_viscosity(breeder_temperature, breeder_density, bre
 
     kinematic_viscosity = breeder_dynamic_viscosity / breeder_density  # m2/s
 
-    print(
-        f"Kinematic viscosity of {breeder} at {breeder_temperature}K is {kinematic_viscosity}m2/s."
-    )
+    if not suppress_print:
+        print(
+            f"Kinematic viscosity of {breeder} at {breeder_temperature}K is {kinematic_viscosity}m2/s."
+        )
 
     return kinematic_viscosity
 
@@ -54,8 +61,6 @@ LiPb_density = (
     10520.35 - 1.19051 * breeder_temperature
 )  # kg/m3 ; equation from Martelli 2019
 
-print(f"Density of {breeder} at {breeder_temperature}K is {LiPb_density}kg/m3.")
-
 k_b = F.k_B  # eV/K, boltzmann constant
 E_D = 19500 * 1.0364e-5  # = 0.202098
 LiPb_diffusivity = 4.03e-8 * np.exp(
@@ -63,26 +68,34 @@ LiPb_diffusivity = 4.03e-8 * np.exp(
 )  # m2/s ; from Utili 2023, 1 J/mol = 1.0364E-5eV
 
 inlet_velocity = calculate_inlet_velocity(
-    flow_rate, inlet_diameter, LiPb_density, breeder
+    flow_rate, inlet_diameter, LiPb_density, breeder, suppress_print=False
 )
 
 kinematic_viscosity = calculate_LiPb_kinematic_viscosity(
-    breeder_temperature, LiPb_density, breeder
+    breeder_temperature, LiPb_density, breeder, suppress_print=True
 )
 
 Re = calculate_reynolds_number(
-    inlet_velocity, inlet_diameter, kinematic_viscosity, breeder
+    inlet_velocity, inlet_diameter, kinematic_viscosity, breeder, suppress_print=True
+)
+
+print(f"Reynolds number for {breeder} at {inlet_velocity}m/s is {Re}.")
+
+Sc = calculate_schmidt_number(
+    kinematic_viscosity=kinematic_viscosity,
+    diffusivity=LiPb_diffusivity,
+    breeder=breeder,
 )
 
 k = calculate_initial_k(inlet_velocity)
 epsilon = calculate_initial_epsilon(k, characteristic_length=inlet_diameter)
+omega = calculate_initial_omega(k, inlet_diameter)
 
+print(f"Density of {breeder} at {breeder_temperature}K is {LiPb_density}kg/m3.")
 print(f"Initial turbulence kinetic energy for {breeder}: {k} m2/s2")
 print(f"Initial turbulence dissipation rate for {breeder}: {epsilon} m2/s3")
-
-omega = calculate_initial_omega(k, inlet_diameter)
 print(f"Initial specific dissipation rate for {breeder}: {omega} 1/s")
 
-# plot_reynolds_number_vs_inlet_velocity(
-#     inlet_diameter, kinematic_viscosity, breeder_temperature, breeder
-# )
+plot_reynolds_number_vs_inlet_velocity(
+    inlet_diameter, kinematic_viscosity, breeder_temperature, breeder, inlet_velocity
+)
